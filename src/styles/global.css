@@ -1,0 +1,248 @@
+/* Variables globales y reset — paleta gamer */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ══════════════════════════════════════════════
+   VARIABLES — Paleta Dev4Gaming
+══════════════════════════════════════════════ */
+:root {
+  /* Fondos — negro espacial con tinte azul */
+  --bg-base:        #080810;
+  --bg-surface:     #0f0f1a;
+  --bg-elevated:    #16162a;
+
+  /* Acentos */
+  --blue:           #00BFFF;
+  --blue-glow:      #00d4ff;
+  --purple:         #7B2FBE;
+  --purple-glow:    #9b3ede;
+
+  /* Texto */
+  --text-primary:   #F0F0FF;
+  --text-secondary: #8888aa;
+  --text-muted:     #555577;
+
+  /* Bordes */
+  --border:         #1e1e35;
+  --border-accent:  #2e2e55;
+
+  /* Glow / Sombras */
+  --glow-blue:   0 0 16px rgba(0, 191, 255, 0.40),
+                 0 0 32px rgba(0, 191, 255, 0.15);
+  --glow-purple: 0 0 16px rgba(123, 47, 190, 0.50),
+                 0 0 32px rgba(123, 47, 190, 0.20);
+  --glow-dual:   0 0 20px rgba(0, 191, 255, 0.25),
+                 0 0 45px rgba(123, 47, 190, 0.20);
+
+  /* Layout */
+  --container: 1200px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Tipografía */
+  --font-display: 'Orbitron', sans-serif;
+  --font-body:    'Inter', sans-serif;
+}
+
+/* ══════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--blue-glow);
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-body);
+  border: none;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.12);
+}
+
+/* ══════════════════════════════════════════════
+   TIPOGRAFÍA
+══════════════════════════════════════════════ */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+h1 { font-size: clamp(2rem,   5vw, 3.5rem);  }
+h2 { font-size: clamp(1.5rem, 3vw, 2.25rem); }
+h3 { font-size: clamp(1.1rem, 2vw, 1.5rem);  }
+
+p {
+  color: var(--text-secondary);
+  max-width: 68ch;
+}
+
+/* ══════════════════════════════════════════════
+   LAYOUT — Container
+══════════════════════════════════════════════ */
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ══════════════════════════════════════════════
+   BOTONES
+══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: box-shadow 0.25s, transform 0.15s, background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: #06060f;
+}
+
+.btn-primary:hover {
+  background-color: var(--blue-glow);
+  box-shadow: var(--glow-blue);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(0, 191, 255, 0.08);
+  box-shadow: var(--glow-blue);
+}
+
+.btn-purple {
+  background-color: var(--purple);
+  color: var(--text-primary);
+}
+
+.btn-purple:hover {
+  background-color: var(--purple-glow);
+  box-shadow: var(--glow-purple);
+  transform: translateY(-2px);
+}
+
+/* ══════════════════════════════════════════════
+   CARDS (base reutilizable)
+══════════════════════════════════════════════ */
+.card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+}
+
+.card:hover {
+  border-color: var(--blue);
+  box-shadow: var(--glow-dual);
+  transform: translateY(-4px);
+}
+
+/* ══════════════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════════════ */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-accent);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--blue);
+  box-shadow: var(--glow-blue);
+}
+
+/* ══════════════════════════════════════════════
+   UTILIDADES
+══════════════════════════════════════════════ */
+.text-blue      { color: var(--blue); }
+.text-purple    { color: var(--purple); }
+.text-muted     { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+
+.glow-blue   { box-shadow: var(--glow-blue); }
+.glow-purple { box-shadow: var(--glow-purple); }
+
+/* ══════════════════════════════════════════════
+   ANIMACIONES
+══════════════════════════════════════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+/* Respeta preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

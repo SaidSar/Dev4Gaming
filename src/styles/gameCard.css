@@ -1,0 +1,130 @@
+/* Estilos del GameCard */
+/* ══════════════════════════════════════════════
+   GAME CARD
+══════════════════════════════════════════════ */
+.game-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* ── Imagen ── */
+.game-card__image {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background-color: var(--bg-elevated);
+}
+
+.game-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.game-card:hover .game-card__image img {
+  transform: scale(1.06);
+}
+
+/* Placeholder cuando no hay imagen */
+.game-card__placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--blue);
+  letter-spacing: 0.05em;
+}
+
+/* ── Badge (BETA / RELEASED) ── */
+.game-card__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+}
+
+.game-card__badge--beta {
+  background-color: var(--purple);
+  color: var(--text-primary);
+}
+
+.game-card__badge--released {
+  background-color: rgba(0, 191, 255, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(0, 191, 255, 0.3);
+}
+
+/* ── Cuerpo ── */
+.game-card__body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+/* ── Meta: genre + rating ── */
+.game-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 22px;
+}
+
+.game-card__genre {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--blue);
+  background-color: rgba(0, 191, 255, 0.08);
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.game-card__rating {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+/* ── Título ── */
+.game-card__title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.game-card:hover .game-card__title {
+  color: var(--blue);
+}
+
+/* ── Dev name ── */
+.game-card__dev {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

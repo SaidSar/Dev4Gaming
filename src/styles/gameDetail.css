@@ -1,0 +1,226 @@
+/* ══════════════════════════════════════════════
+   GAME DETAIL PAGE
+══════════════════════════════════════════════ */
+.game-detail {
+  padding-bottom: 5rem;
+}
+
+/* ── Banner ── */
+.game-detail__banner {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  background-color: var(--bg-elevated);
+}
+
+.game-detail__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-detail__banner-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 6rem;
+  font-weight: 900;
+  color: var(--blue);
+  opacity: 0.15;
+}
+
+.game-detail__banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    var(--bg-base) 100%
+  );
+}
+
+/* ── Back link ── */
+.game-detail__back {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 1.5rem;
+  margin-bottom: 1.25rem;
+  transition: color 0.2s;
+}
+
+.game-detail__back:hover {
+  color: var(--blue);
+}
+
+/* ── Header ── */
+.game-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.game-detail__badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.game-detail__genre {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--blue);
+  background-color: rgba(0, 191, 255, 0.08);
+  border: 1px solid rgba(0, 191, 255, 0.25);
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.game-detail__status {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.game-detail__status--beta {
+  background-color: var(--purple);
+  color: var(--text-primary);
+}
+
+.game-detail__status--released {
+  background-color: rgba(0, 191, 255, 0.12);
+  color: var(--blue);
+  border: 1px solid rgba(0, 191, 255, 0.3);
+}
+
+.game-detail__title {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: 0.3rem;
+}
+
+.game-detail__dev {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  max-width: none;
+}
+
+/* ── Rating ── */
+.game-detail__rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.game-detail__rating-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f59e0b;
+  line-height: 1;
+}
+
+.game-detail__rating-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Descripción ── */
+.game-detail__description {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  max-width: 72ch;
+  margin-bottom: 2.5rem;
+}
+
+/* ── Sección de reseñas ── */
+.game-detail__reviews {
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+}
+
+.game-detail__reviews-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.game-detail__reviews-count {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-accent);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+/* ── Skeleton / Loading ── */
+.gd-loading {
+  padding: 2rem 0 5rem;
+}
+
+.gd-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface)  25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface)  75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite ease-in-out;
+  border-radius: var(--radius-md);
+}
+
+.gd-skeleton--banner {
+  width: 100%;
+  height: 280px;
+  border-radius: 0;
+}
+
+.gd-skeleton-body {
+  padding: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gd-skeleton--line {
+  height: 1rem;
+  width: 100%;
+}
+
+/* ── Error ── */
+.gd-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 5rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .game-detail__banner  { height: 200px; }
+  .game-detail__rating  { align-items: flex-start; }
+}
