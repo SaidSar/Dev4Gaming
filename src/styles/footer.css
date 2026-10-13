@@ -1,0 +1,35 @@
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0;
+}
+
+.footer__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.footer__brand,
+.footer__credit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-width: none;
+}
+
+.footer__brand {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.footer__credit a {
+  color: var(--text-secondary);
+}
+
+.footer__credit a:hover {
+  color: var(--blue);
+}

@@ -60,6 +60,10 @@
   margin-bottom: 1.75rem;
 }
 
+.hero__badge-icon {
+  color: var(--blue);
+}
+
 /* Titular */
 .hero__title {
   font-size: clamp(2.4rem, 7vw, 4.75rem);
@@ -111,8 +115,23 @@
 }
 
 .feature-card__icon {
-  font-size: 2rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 0.25rem;
+  color: var(--blue);
+  background-color: rgba(0, 191, 255, 0.08);
+  border: 1px solid rgba(0, 191, 255, 0.25);
+  border-radius: var(--radius-sm);
+  transition: box-shadow 0.25s, border-color 0.25s, color 0.25s;
+}
+
+.feature-card:hover .feature-card__icon {
+  color: var(--blue-glow);
+  border-color: var(--blue);
+  box-shadow: var(--glow-blue);
 }
 
 .feature-card__title {

@@ -1,33 +1,56 @@
 // Card individual de un juego en el catálogo
-import { Link } from 'react-router-dom'
+import GameCover from './GameCover'
+import Icon from './Icon'
+import StarRating from './StarRating'
 import '../styles/gameCard.css'
 
-function GameCard({ id, title, genre, developer_name, image_url, status, rating }) {
-  const stars = rating ? Number(rating).toFixed(1) : null
+function GameCard({ game, stats, onPlay }) {
+  const { title, genre, developer_name, cover_url, status } = game
 
   return (
-    <Link to={`/games/${id}`} className="game-card card">
+    <article className="game-card card">
 
-      <div className="game-card__image">
-        {image_url
-          ? <img src={image_url} alt={`Portada de ${title}`} />
-          : <div className="game-card__placeholder">{title?.charAt(0)}</div>
-        }
-        <span className={`game-card__badge game-card__badge--${status}`}>
-          {status === 'beta' ? 'BETA' : 'RELEASED'}
-        </span>
-      </div>
+      <GameCover src={cover_url} title={title} genre={genre} className="game-card__cover">
+        <span className="game-card__badge game-card__badge--demo">DEMO GRATIS</span>
+        {status && (
+          <span className={`game-card__badge game-card__badge--${status}`}>
+            {status === 'beta' ? 'BETA' : 'RELEASED'}
+          </span>
+        )}
+      </GameCover>
 
       <div className="game-card__body">
-        <div className="game-card__meta">
-          {genre && <span className="game-card__genre">{genre}</span>}
-          {stars && <span className="game-card__rating">★ {stars}</span>}
-        </div>
         <h3 className="game-card__title">{title}</h3>
-        <p className="game-card__dev">{developer_name}</p>
+        <p className="game-card__dev">
+          {genre && <span className="game-card__genre">{genre}</span>}
+          {developer_name && <span>por {developer_name}</span>}
+        </p>
+
+        <div className="game-card__rating">
+          {stats?.count ? (
+            <>
+              <StarRating value={stats.avg} size="sm" />
+              <span className="game-card__rating-value">{stats.avg.toFixed(1)}</span>
+              <span className="game-card__rating-count">
+                ({stats.count} {stats.count === 1 ? 'reseña' : 'reseñas'})
+              </span>
+            </>
+          ) : (
+            <span className="game-card__rating-empty">Sin reseñas aún, sé el primero</span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary game-card__play"
+          onClick={() => onPlay(game)}
+        >
+          <Icon name="play" size={14} />
+          Jugar
+        </button>
       </div>
 
-    </Link>
+    </article>
   )
 }
 

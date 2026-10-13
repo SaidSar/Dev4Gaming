@@ -52,10 +52,10 @@ export async function getReviewsByGame(gameId) {
   return data
 }
 
-export async function postReview({ game_id, user_id = null, user_name, rating, comment }) {
+export async function postReview({ game_id, user_id = null, user_name, rating, comment, utm_source = null }) {
   const { data, error } = await supabase
     .from('reviews')
-    .insert([{ game_id, user_id, user_name, rating, comment }])
+    .insert([{ game_id, user_id, user_name, rating, comment, utm_source }])
     .select()
     .single()
 
@@ -63,13 +63,56 @@ export async function postReview({ game_id, user_id = null, user_name, rating, c
   return data
 }
 
+/**
+ * Promedio y conteo de reseñas de TODOS los juegos con una sola consulta
+ * (se agrega en el cliente para evitar N+1).
+ * @returns {Object<string, {avg: number, count: number}>} indexado por game_id
+ */
+export async function getReviewStats() {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('game_id, rating')
+
+  if (error) throw error
+
+  const totals = {}
+  for (const { game_id, rating } of data) {
+    const t = totals[game_id] ?? (totals[game_id] = { sum: 0, count: 0 })
+    t.sum += rating
+    t.count += 1
+  }
+
+  const stats = {}
+  for (const [gameId, { sum, count }] of Object.entries(totals)) {
+    stats[gameId] = { avg: Math.round((sum / count) * 10) / 10, count }
+  }
+  return stats
+}
+
+// ─── CONVERSIONES ─────────────────────────────────────────
+
+/**
+ * Registra un evento del embudo. Sin .select(): conversion_events
+ * no tiene política de lectura pública.
+ */
+export async function insertConversionEvent(row) {
+  const { error } = await supabase.from('conversion_events').insert([row])
+  if (error) throw error
+}
+
+export async function getCurrentUserId() {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user?.id ?? null
+}
+
 // ─── AUTH ─────────────────────────────────────────────────
 
-export async function signUp({ email, password, displayName }) {
+// utm_source viaja en los metadatos; el trigger handle_new_user() lo copia a profiles.
+export async function signUp({ email, password, displayName, utmSource = null }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } },
+    options: { data: { display_name: displayName, utm_source: utmSource } },
   })
   if (error) throw error
   return data

@@ -73,7 +73,7 @@
 
 /* ── Skeleton loader ── */
 .catalog__skeleton {
-  min-height: 220px;
+  min-height: 400px;
   background: linear-gradient(
     90deg,
     var(--bg-surface)  25%,
@@ -100,8 +100,11 @@
 }
 
 .catalog__state-icon {
-  font-size: 2.75rem;
-  line-height: 1;
+  color: var(--blue);
+}
+
+.catalog__state-icon--error {
+  color: #ff6b6b;
 }
 
 .catalog__state p {

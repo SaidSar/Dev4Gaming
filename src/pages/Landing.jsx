@@ -1,22 +1,23 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import Icon from '../components/Icon'
 import '../styles/landing.css'
 
 const FEATURES = [
   {
-    icon: '🎮',
+    icon: 'gamepad',
     title: 'Para jugadores',
     description:
       'Accede a juegos beta antes que nadie. Tu reseña no es solo un número — es el parche de la próxima versión.',
   },
   {
-    icon: '🛠️',
+    icon: 'rocket',
     title: 'Para desarrolladores',
     description:
       'Sube tu juego en beta y recibe feedback directo de jugadores reales. Sin filtros, sin intermediarios.',
   },
   {
-    icon: '⭐',
+    icon: 'star',
     title: 'Reseñas que importan',
     description:
       'Califica del 1 al 5, deja comentarios y reporta bugs. El sistema que convierte opiniones en decisiones.',
@@ -40,7 +41,7 @@ function Landing() {
         <div className="container hero__content fade-in">
 
           <div className="hero__badge">
-            <span aria-hidden="true">🎮</span>
+            <Icon name="gamepad" size={16} className="hero__badge-icon" />
             Beta abierta — 3 juegos disponibles
           </div>
 
@@ -73,8 +74,8 @@ function Landing() {
           <div className="features__grid">
             {FEATURES.map((f, i) => (
               <article key={i} className="feature-card card">
-                <span className="feature-card__icon" aria-hidden="true">
-                  {f.icon}
+                <span className="feature-card__icon">
+                  <Icon name={f.icon} size={24} />
                 </span>
                 <h3 className="feature-card__title">{f.title}</h3>
                 <p className="feature-card__desc">{f.description}</p>

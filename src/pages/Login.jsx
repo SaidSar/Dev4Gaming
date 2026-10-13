@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { signIn, signUp } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
+import { getUtm } from '../utils/utm'
+import { trackConversion } from '../utils/track'
 import '../styles/auth.css'
 
 function friendlyError(err) {
@@ -17,7 +19,7 @@ function Login() {
   const wantsDev = params.get('role') === 'developer'
   const { user, loading } = useAuth()
 
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [mode, setMode] = useState(params.get('mode') === 'register' ? 'register' : 'login') // 'login' | 'register'
   const [form, setForm] = useState({ displayName: '', email: '', password: '' })
   const [busy, setBusy]   = useState(false)
   const [error, setError] = useState(null)
@@ -50,7 +52,9 @@ function Login() {
           email,
           password: form.password,
           displayName: form.displayName.trim(),
+          utmSource: getUtm().utm_source ?? null,
         })
+        trackConversion('sign_up')
         if (!data.session) {
           setInfo('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.')
           setMode('login')

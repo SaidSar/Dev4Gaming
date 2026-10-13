@@ -1,0 +1,57 @@
+/* ══════════════════════════════════════════════
+   CAMPAIGN BANNER
+══════════════════════════════════════════════ */
+.campaign-banner {
+  background: linear-gradient(
+    90deg,
+    rgba(123, 47, 190, 0.28) 0%,
+    rgba(0, 191, 255, 0.18) 100%
+  );
+  border-bottom: 1px solid var(--border-accent);
+}
+
+.campaign-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 48px;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.campaign-banner__text {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: none;
+}
+
+.campaign-banner__icon {
+  flex-shrink: 0;
+  color: var(--blue);
+}
+
+.campaign-banner__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.campaign-banner__close:hover,
+.campaign-banner__close:focus-visible {
+  color: var(--text-primary);
+  background-color: rgba(240, 240, 255, 0.08);
+}
+
+@media (max-width: 480px) {
+  .campaign-banner__text { font-size: 0.82rem; }
+}

@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { postReview } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
+import { getUtm } from '../utils/utm'
+import { trackConversion } from '../utils/track'
 import '../styles/reviewForm.css'
 
 function randomAnonName() {
@@ -20,28 +23,34 @@ function ReviewForm({ gameId, onReviewPosted }) {
   async function handleSubmit(e) {
     e.preventDefault()
 
-    if (!rating || !comment.trim()) {
-      setError('Elige una calificación y escribe un comentario.')
+    if (!rating) {
+      setError('Elige de 1 a 5 estrellas para publicar.')
+      return
+    }
+    if (!comment.trim()) {
+      setError('Escribe un comentario para publicar.')
       return
     }
 
     setLoading(true)
     setError(null)
+    setSuccess(false)
 
     try {
       const review = await postReview({
-        game_id:   gameId,
-        user_id:   user?.id ?? null,
-        user_name: user ? displayName : (userName.trim() || randomAnonName()),
+        game_id:    gameId,
+        user_id:    user?.id ?? null,
+        user_name:  user ? displayName : (userName.trim() || randomAnonName()),
         rating,
-        comment:   comment.trim(),
+        comment:    comment.trim(),
+        utm_source: getUtm().utm_source ?? null,
       })
       setSuccess(true)
       setUserName('')
       setRating(0)
       setComment('')
       onReviewPosted?.(review)
-      setTimeout(() => setSuccess(false), 4000)
+      trackConversion('submit_review', { game_id: gameId, rating: review.rating })
     } catch {
       setError('No se pudo enviar la reseña. Intenta de nuevo.')
     } finally {
@@ -54,8 +63,13 @@ function ReviewForm({ gameId, onReviewPosted }) {
       <h3 className="review-form__title">Deja tu reseña</h3>
 
       {success && (
-        <div className="review-form__success">
-          ✓ ¡Reseña publicada! Gracias por tu feedback.
+        <div className="review-form__success" role="status">
+          <p>✓ ¡Reseña publicada! Gracias por tu feedback.</p>
+          {!user && (
+            <Link to="/login?mode=register" className="btn btn-secondary review-form__signup">
+              Crear cuenta para guardar mis reseñas
+            </Link>
+          )}
         </div>
       )}
 
@@ -87,10 +101,11 @@ function ReviewForm({ gameId, onReviewPosted }) {
                 key={star}
                 type="button"
                 className={`review-form__star ${star <= (hovered || rating) ? 'review-form__star--active' : ''}`}
-                onClick={() => setRating(star)}
+                onClick={() => { setRating(star); setError(null) }}
                 onMouseEnter={() => setHovered(star)}
                 onMouseLeave={() => setHovered(0)}
                 aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
+                aria-pressed={star === rating}
               >
                 ★
               </button>

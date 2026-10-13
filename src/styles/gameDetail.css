@@ -5,47 +5,11 @@
   padding-bottom: 5rem;
 }
 
-/* ── Banner ── */
-.game-detail__banner {
-  position: relative;
-  width: 100%;
-  height: 320px;
-  overflow: hidden;
-  background-color: var(--bg-elevated);
-}
-
-.game-detail__banner img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.game-detail__banner-ph {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 6rem;
-  font-weight: 900;
-  color: var(--blue);
-  opacity: 0.15;
-}
-
-.game-detail__banner-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 40%,
-    var(--bg-base) 100%
-  );
-}
-
 /* ── Back link ── */
 .game-detail__back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-muted);
@@ -58,16 +22,28 @@
   color: var(--blue);
 }
 
-/* ── Header ── */
-.game-detail__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
+/* ── Layout de dos columnas ── */
+.game-detail__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 2.5rem;
+  align-items: start;
 }
 
+.game-detail__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── Portada ── */
+.game-detail__cover {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+/* ── Badges ── */
 .game-detail__badges {
   display: flex;
   gap: 0.5rem;
@@ -115,27 +91,28 @@
   font-size: 0.88rem;
   color: var(--text-muted);
   max-width: none;
+  margin-bottom: 0.75rem;
 }
 
 /* ── Rating ── */
 .game-detail__rating {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
 }
 
 .game-detail__rating-value {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: #f59e0b;
   line-height: 1;
 }
 
 .game-detail__rating-count {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 
@@ -145,13 +122,111 @@
   line-height: 1.75;
   color: var(--text-secondary);
   max-width: 72ch;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
-/* ── Sección de reseñas ── */
+.game-detail__section-title {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Recuadro de descarga ── */
+.game-detail__download {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* No es una tarjeta clicable: sin elevación al hover */
+.game-detail__download:hover {
+  transform: none;
+  border-color: var(--border-accent);
+  box-shadow: none;
+}
+
+.game-detail__pills {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.game-detail__pill {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-accent);
+  padding: 0.25rem 0.85rem;
+  border-radius: 999px;
+}
+
+.game-detail__pill--free {
+  color: #00ff88;
+  border-color: rgba(0, 255, 136, 0.35);
+  background-color: rgba(0, 255, 136, 0.08);
+}
+
+.game-detail__download-btn {
+  width: 100%;
+  padding: 0.95rem 1.6rem;
+  font-size: 1.05rem;
+}
+
+.game-detail__download-msg {
+  min-height: 1.4em;
+  margin-top: 0.75rem;
+  font-size: 0.88rem;
+  color: var(--blue);
+  max-width: none;
+  text-align: center;
+}
+
+/* ── Distribución de calificaciones ── */
+.game-detail__dist-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.game-detail__dist-row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.game-detail__dist-label {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.game-detail__dist-bar {
+  height: 10px;
+  border-radius: 999px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.game-detail__dist-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--purple), var(--blue));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.game-detail__dist-total {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ── Columna de reseñas ── */
 .game-detail__reviews {
-  border-top: 1px solid var(--border);
-  padding-top: 2rem;
+  min-width: 0;
 }
 
 .game-detail__reviews-title {
@@ -193,7 +268,6 @@
 .gd-skeleton--banner {
   width: 100%;
   height: 280px;
-  border-radius: 0;
 }
 
 .gd-skeleton-body {
@@ -219,8 +293,19 @@
   color: var(--text-secondary);
 }
 
-/* ── Responsive ── */
-@media (max-width: 640px) {
-  .game-detail__banner  { height: 200px; }
-  .game-detail__rating  { align-items: flex-start; }
+.gd-error__icon {
+  color: #ff6b6b;
+}
+
+/* ── Responsive: una sola columna en móvil (< 760px) ── */
+@media (max-width: 759.98px) {
+  .game-detail__layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .game-detail__reviews {
+    border-top: 1px solid var(--border);
+    padding-top: 2rem;
+  }
 }

@@ -1,0 +1,15 @@
+/* ══════════════════════════════════════════════
+   STAR RATING (solo lectura)
+══════════════════════════════════════════════ */
+.star-rating {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+}
+
+.star-rating__star     { color: var(--border-accent); }
+.star-rating__star--on { color: #f59e0b; }
+
+.star-rating--sm { font-size: 0.9rem; }
+.star-rating--md { font-size: 1.1rem; }
+.star-rating--lg { font-size: 1.5rem; }

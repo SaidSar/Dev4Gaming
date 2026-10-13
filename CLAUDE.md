@@ -1,183 +1,178 @@
-# Dev4Gaming — Contexto del proyecto
+# Dev4Gaming — Contexto del proyecto (CLAUDE.md)
 
-Este documento describe el estado actual del proyecto para asistentes de código, incluido Claude Chat/Claude Code. Es una guía basada en el código presente; cuando algo aquí y el código difieran, verifica el código antes de cambiarlo y actualiza este documento si la arquitectura cambia.
+> Última revisión: 2026-10-12. Fuente de verdad = el código. Si difieren, verifica el código y actualiza este archivo.
 
-## 1. Resumen
+Plataforma web (MVP, en español) para descubrir juegos indie en **beta** y dejar reseñas con calificación 1–5 ★.
+Proyecto escolar UAdeO (materias E-Marketing y SOA). El módulo de reseñas se presenta como "microservicio".
 
-Dev4Gaming es una aplicación web para descubrir juegos indie y recopilar reseñas de jugadores, con énfasis en títulos en beta. La interfaz permite consultar un catálogo, abrir la ficha de un juego y publicar comentarios con una calificación de 1 a 5 estrellas.
+## 1. Stack y comandos
 
-La aplicación es un MVP en español. El frontend está implementado; los datos persistentes se leen y escriben en Supabase. No hay autenticación ni área de administración implementadas.
-
-## 2. Tecnologías
-
-- React 19 con componentes funcionales y hooks.
-- Vite 8 como servidor de desarrollo y bundler.
-- React Router DOM 7 para navegación del lado del cliente.
-- Supabase JavaScript Client 2 para consultar Postgres.
-- CSS propio, organizado por página/componente; no hay framework CSS.
-- JavaScript con módulos ES; el proyecto no usa TypeScript.
-- Oxlint para lint.
-
-## 3. Estructura
-
-```text
-.
-├── index.html                   # Documento HTML y punto de montaje
-├── package.json                 # Dependencias y scripts npm
-├── vite.config.js               # Configuración de Vite y plugin React
-├── supabase_setup.sql           # Esquema, políticas RLS y datos de ejemplo
-├── public/
-│   ├── favicon.svg
-│   └── icons.svg
-└── src/
-    ├── main.jsx                 # Monta React dentro de #root
-    ├── App.jsx                  # Router y rutas principales
-    ├── services/
-    │   └── supabase.js          # Cliente Supabase y operaciones de datos
-    ├── components/
-    │   ├── Navbar.jsx
-    │   ├── GameCard.jsx
-    │   ├── ReviewForm.jsx
-    │   └── ReviewList.jsx
-    ├── pages/
-    │   ├── Landing.jsx
-    │   ├── Catalog.jsx
-    │   └── GameDetail.jsx
-    ├── styles/
-    │   ├── global.css
-    │   ├── landing.css
-    │   ├── navbar.css
-    │   ├── catalog.css
-    │   ├── gameCard.css
-    │   ├── gameDetail.css
-    │   └── reviewForm.css
-    └── assets/
-        ├── hero.png
-        └── vite.svg
-```
-
-`node_modules/` y `dist/` son artefactos locales/generados, no código fuente que normalmente deba editarse.
-
-## 4. Rutas y comportamiento de la interfaz
-
-Las rutas se declaran en `src/App.jsx`:
-
-| Ruta | Página | Comportamiento |
-|---|---|---|
-| `/` | Landing | Presentación y enlaces al catálogo. |
-| `/games` | Catálogo | Obtiene juegos de Supabase, permite filtrar por género y muestra estados de carga/error/vacío. |
-| `/games/:id` | Detalle | Obtiene un juego y sus reseñas; muestra formulario, calificación media y lista de reseñas. |
-
-La barra superior (`Navbar`) es global. En pantallas pequeñas muestra un menú hamburguesa. Los textos visibles y mensajes de interfaz están principalmente en español.
-
-### Flujo de datos
-
-1. `Catalog` llama `getGames()` al montarse; filtra los resultados en el cliente por `genre`.
-2. Cada `GameCard` enlaza a `/games/:id`.
-3. `GameDetail` obtiene el juego y las reseñas en paralelo mediante `getGameById(id)` y `getReviewsByGame(id)`.
-4. `ReviewForm` valida nombre, puntuación y comentario en cliente, luego llama `postReview(...)`.
-5. Cuando Supabase confirma la inserción, el detalle agrega la reseña al estado local sin volver a consultar.
-6. La media de estrellas del detalle se calcula a partir de las reseñas cargadas en memoria.
-
-## 5. Datos y Supabase
-
-El cliente y las funciones de acceso a datos están en `src/services/supabase.js`. Las variables de entorno requeridas son:
-
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
-
-Configúralas en un archivo `.env` local en la raíz. `.env` está ignorado por Git; no incluyas sus valores en documentación, logs, commits ni respuestas. Las variables `VITE_*` llegan al bundle del navegador, por lo que la clave anon no debe tratarse como un secreto: los permisos deben estar protegidos mediante RLS. Nunca pongas una clave `service_role` en el frontend.
-
-### Tabla `games`
-
-Creada por `supabase_setup.sql`:
-
-| Columna | Tipo / regla | Uso |
-|---|---|---|
-| `id` | UUID, PK, default `gen_random_uuid()` | Identificador de ruta. |
-| `title` | TEXT, requerido | Título mostrado. |
-| `description` | TEXT, opcional | Descripción en detalle. |
-| `genre` | TEXT, opcional | Filtro del catálogo. |
-| `developer_name` | TEXT, opcional | Nombre del desarrollador. |
-| `image_url` | TEXT, opcional | URL de portada/banner. |
-| `status` | TEXT, default `beta`, restringido a `beta` o `released` | Badge de estado. |
-| `created_at` | TIMESTAMPTZ, default `NOW()` | Orden descendente en catálogo. |
-
-### Tabla `reviews`
-
-| Columna | Tipo / regla | Uso |
-|---|---|---|
-| `id` | UUID, PK, default `gen_random_uuid()` | Clave de la reseña. |
-| `game_id` | UUID, FK a `games.id`, `ON DELETE CASCADE` | Juego reseñado. |
-| `user_name` | TEXT, requerido | Nombre ingresado por el usuario. |
-| `rating` | INTEGER, requerido, entre 1 y 5 | Calificación. |
-| `comment` | TEXT, opcional en base de datos | Texto de reseña. |
-| `created_at` | TIMESTAMPTZ, default `NOW()` | Fecha y orden de visualización. |
-
-El formulario impone además nombre y comentario no vacíos y límites de 50 y 500 caracteres respectivamente.
-
-### Políticas presentes en el SQL
-
-- RLS está habilitado en ambas tablas.
-- `games`: política de lectura pública (`SELECT`).
-- `reviews`: lectura pública (`SELECT`) e inserción pública (`INSERT`).
-- El script no define políticas de escritura para juegos.
-- No hay autenticación, límites de frecuencia ni moderación de reseñas en la implementación actual.
-
-`supabase_setup.sql` también inserta tres juegos de demostración (Void Runner, Shadow Forge y Pixel Siege). La creación de tablas usa `IF NOT EXISTS`, pero las políticas e inserciones de ejemplo no están diseñadas como una migración completamente repetible; comprueba el estado de Supabase antes de ejecutarlo otra vez.
-
-## 6. Desarrollo y validación
-
-Requiere Node.js y npm compatibles con las versiones actuales de Vite del proyecto, dependencias instaladas y variables de Supabase configuradas.
+- React 19 (funcional + hooks) · Vite 8 · React Router DOM 7 · @supabase/supabase-js 2
+- JavaScript (sin TypeScript) · CSS propio por página/componente (sin Tailwind ni CSS Modules) · Oxlint
+- Sin backend propio: el frontend habla directo con Supabase (Postgres + Auth) protegido por RLS.
 
 ```bash
 npm install
-npm run dev
+npm run dev      # Vite dev server (http://localhost:5173)
+npm run build    # Build a dist/
+npm run preview  # Sirve dist/
+npm run lint     # Oxlint (.oxlintrc.json: react + oxc)
 ```
+No hay tests. Tras cambios de código: `npm run lint` y `npm run build`.
 
-Scripts disponibles:
-
-```bash
-npm run dev      # Servidor local de Vite
-npm run build    # Build de producción en dist/
-npm run preview  # Sirve localmente el build
-npm run lint     # Ejecuta Oxlint
+`.env` (ignorado por Git; nunca mostrar valores):
 ```
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+La anon key es pública por diseño; la seguridad depende de RLS. Nunca usar `service_role` en el frontend.
+Proyecto Supabase ref: `kbygvkpvushuldyygcba`.
 
-No hay script de pruebas ni suite de tests configurada actualmente en `package.json`.
+## 2. Estructura
 
-## 7. Convenciones al modificar
+```text
+src/
+├── main.jsx                 # createRoot + StrictMode
+├── App.jsx                  # BrowserRouter > AuthProvider > Navbar + Routes
+├── services/supabase.js     # ÚNICO punto de acceso a Supabase (cliente + todas las queries/mutaciones)
+├── utils/
+│   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
+│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe)
+├── context/
+│   ├── auth-context.js      # createContext(null)
+│   ├── AuthContext.jsx      # <AuthProvider>: sesión, profile, verification, displayName, loading, refresh
+│   └── useAuth.js           # hook useAuth() (lanza error fuera del provider)
+├── components/
+│   ├── Navbar.jsx           # global, hamburguesa <640px, link Login/Perfil según sesión
+│   ├── CampaignBanner.jsx   # bajo el navbar si utm_source ∈ tiktok|instagram|discord|email; × lo oculta en la sesión
+│   ├── ProtectedRoute.jsx   # redirige a loginTo si no hay user
+│   ├── GameCover.jsx        # portada 16:10 desde cover_url; respaldo degradado + título si falta/falla
+│   ├── StarRating.jsx       # estrellas de solo lectura (promedio)
+│   ├── GameCard.jsx         # tarjeta del catálogo: portada, DEMO GRATIS, ★ promedio, botón "▶ Jugar"
+│   ├── ReviewForm.jsx       # formulario + selector de estrellas
+│   └── ReviewList.jsx       # lista de reseñas (avatar inicial, fecha es-MX, estrellas)
+├── pages/
+│   ├── Landing.jsx  Catalog.jsx  GameDetail.jsx
+│   ├── Login.jsx    Profile.jsx  VerifyDeveloper.jsx
+├── styles/                  # global.css + 1 CSS por página/componente
+└── assets/                  # hero.png (sin usar), vite.svg
+public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shadow-forge, pixel-siege)
+supabase_setup.sql           # ⚠ desactualizado: solo games/reviews (ver §4)
+supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
+```
+No existe carpeta `hooks/` aparte; el único hook custom es `context/useAuth.js`.
 
-- Mantén componentes funcionales y hooks de React; no introduzcas otra arquitectura sin necesidad.
-- Conserva la separación actual: páginas orquestan estado/datos, componentes presentan UI reutilizable y `services/supabase.js` centraliza consultas.
-- Reutiliza el cliente y las funciones Supabase existentes; ante una nueva consulta, añade una función de servicio en ese módulo o extrae un servicio si el alcance lo justifica.
-- Comprueba el resultado de cada operación Supabase y propaga errores; las funciones actuales lanzan `error` cuando Supabase devuelve uno.
-- Usa clases BEM con prefijo del componente o página (`game-card__...`, `catalog__...`) y coloca los estilos en el CSS correspondiente.
-- Usa las variables CSS globales de `src/styles/global.css` para colores, tipografía, espacios y radios antes de añadir valores globales nuevos.
-- Mantén el diseño responsive y contempla estados de carga, error y contenido vacío en las vistas con datos remotos.
-- Mantén etiquetas, mensajes y contenido de interfaz en español salvo que el producto solicite otro idioma.
-- No agregues secretos, claves `service_role` o valores reales de `.env` al código o al Markdown.
-- Si cambias columnas, restricciones o políticas, actualiza coordinadamente `supabase_setup.sql`, las consultas/consumidores del frontend y este contexto.
+## 3. Rutas (src/App.jsx)
 
-## 8. Límites y detalles que conviene tener presentes
+| Ruta | Página | Acceso | Notas |
+|---|---|---|---|
+| `/` | Landing | pública | CTA "Soy desarrollador" → `/login?role=developer`, `/developer/verify` o `/profile` según estado |
+| `/games` | Catalog | pública | |
+| `/juego/:id` | GameDetail | pública | 2 columnas (juego + descarga + distribución / reseñas); 1 columna <760px |
+| `/games/:id` | redirect | pública | `LegacyGameRedirect` → `/juego/:id` |
+| `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro); si hay sesión redirige (a `/developer/verify` si `?role=developer`) |
+| `/profile` | Profile | `ProtectedRoute` | rol JUGADOR / DESARROLLADOR + estado; cerrar sesión |
+| `/developer/verify` | VerifyDeveloper | `ProtectedRoute loginTo="/login?role=developer"` | formulario independiente/empresa |
 
-- El CTA “Soy desarrollador” de la landing actualmente lleva al catálogo, igual que el CTA de jugadores; no existe aún un flujo para publicar juegos.
-- El catálogo no consulta reseñas para poblar `rating` en `GameCard`; el componente acepta esa prop, pero el servicio `getGames()` solo obtiene filas de `games`.
-- La calificación media visible en el detalle se deriva de las reseñas que la página ha cargado; `getAverageRating()` existe en el servicio pero no está conectado a esa pantalla.
-- Las rutas no incluyen una página catch-all personalizada.
-- El título y `lang` del HTML base (`index.html`) todavía son los valores genéricos iniciales (`dev4gaming` y `en`).
-- Los juegos de ejemplo utilizan imágenes externas de `placehold.co`.
-- La configuración de Vite es mínima; no hay backend propio ni API server dentro del repositorio.
+No hay ruta 404 (catch-all).
 
-## 9. Guía breve para Claude
+## 4. Datos (Supabase)
 
-Antes de implementar un cambio:
+Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
+- Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`
+- Reseñas: `getReviewsByGame(gameId)`, `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
+- Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
+- Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
 
-1. Lee los archivos implicados y busca usos de los componentes/funciones para mantener coherencia.
-2. Distingue el comportamiento actual de una funcionalidad propuesta; no supongas que algo descrito como idea ya existe.
-3. Para cambios de datos, revisa RLS y el esquema SQL además del frontend.
-4. Haz cambios acotados, conserva el idioma/diseño actual y no añadas dependencias si no son necesarias.
-5. Ejecuta como mínimo `npm run lint` y `npm run build` para cambios de código. Para cambios exclusivamente documentales, no hace falta build.
-6. Actualiza este archivo cuando cambie de forma significativa el flujo, las rutas, el esquema, las variables requeridas o los comandos.
+Esquema real en la BD (public):
+- `games`: id uuid PK, title, description, genre, developer_name, image_url (placeholders, ya no se usa), status ('beta'|'released', default beta), created_at, cover_url, platform, download_size, version
+- `reviews`: id, game_id → games (cascade), user_name, rating 1–5, comment, created_at, **user_id uuid nullable → auth.users**, utm_source
+- `profiles`: id → auth.users PK, display_name, created_at, utm_source. Se crea por trigger `on_auth_user_created` → `handle_new_user()` (copia `display_name` y `utm_source` de raw_user_meta_data)
+- `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
+- `developer_verifications`: user_id PK → auth.users, type ('independent'|'company'), legal_name, website, portfolio_url, tax_id, status ('pending'|'approved'|'rejected'), created_at
+
+RLS (todas habilitadas):
+- games: SELECT público. Sin políticas de escritura (los juegos se cargan a mano en el dashboard).
+- reviews: SELECT público; INSERT si `user_id IS NULL OR user_id = auth.uid()`.
+- profiles: SELECT solo el propio.
+- developer_verifications: SELECT/INSERT propio (status='pending'); UPDATE propio si no está `approved` y deja `pending`. La aprobación es manual (dashboard).
+- conversion_events: INSERT a anon/authenticated si `user_id IS NULL OR user_id = auth.uid()`. Sin SELECT (no existe rol admin): se lee solo desde dashboard/service_role.
+
+`supabase_setup.sql` NO incluye profiles, developer_verifications, reviews.user_id, el trigger ni las políticas nuevas; lo del embudo está en `supabase_funnel.sql`. Si cambias esquema, actualiza ese SQL, este archivo y los consumidores.
+
+## 5. Flujos clave
+
+**Auth** (`AuthContext.jsx`): `getSession()` + `onAuthStateChange`; al haber `user.id` carga `profile` y `verification` en paralelo (errores → null). `displayName = profile.display_name || prefijo del email`. `loading` = sesión no verificada o datos del usuario aún no cargados. `refresh()` recarga tras enviar verificación.
+
+**Catálogo** (`Catalog.jsx`): `Promise.all([getGames(), getReviewStats().catch(() => ({}))])` al montar → géneros derivados con `new Set(...)` + "Todos" → filtro 100% en cliente (`activeGenre`). Estados: skeletons (6), error con "Reintentar", vacío, contador. Sin reseñas: "Sin reseñas aún, sé el primero". "▶ Jugar" → `trackConversion('play_click')` + navigate a `/juego/:id`.
+
+**Detalle** (`GameDetail.jsx`): `Promise.all([getGameById, getReviewsByGame])`; promedio y distribución 5★→1★ en cliente; reseña nueva se antepone sin re-fetch. "⬇ Descargar juego" no descarga: muestra "La descarga estará disponible pronto." + `trackConversion('download_click')`.
+
+**Campaña / UTM**: `App` llama `captureUtm()` como inicializador de `useState` (una vez). Guarda utm_source/medium/campaign/content en sessionStorage `d4g_utm`; sin UTM ni nada guardado → `{utm_source:'direct'}`; nunca pisa un UTM con 'direct'. `CampaignBanner` recibe `utm.utm_source`; al cerrarlo se guarda `d4g_banner_closed`.
+
+**Conversiones** (`utils/track.js`): `trackConversion(event, extra)` inserta en `conversion_events` con UTM + user_id de sesión y llama `window.gtag` si existe; nunca lanza (try/catch + console.warn). Puntos: `play_click` (Catalog), `download_click` (GameDetail), `submit_review` (ReviewForm; además guarda `utm_source` en la reseña), `sign_up` (Login tras `signUp`; cuenta el envío aunque falte confirmar el correo).
+
+**Reseñas** (`ReviewForm.jsx`):
+- Autenticado: "Publicarás como {displayName}", envía `user_id = user.id`, `user_name = displayName`.
+- Anónimo: nombre opcional (máx 50); vacío → `Anonimo####` aleatorio; `user_id = null`.
+- Estrellas: 5 `<button>` con hover (`hovered || rating`), `aria-label`, `aria-pressed`; sin estrellas → "Elige de 1 a 5 estrellas para publicar."; comentario requerido (máx 500, contador).
+- Éxito: confirmación persistente + callback `onReviewPosted`; sin sesión, botón "Crear cuenta para guardar mis reseñas" → `/login?mode=register`.
+
+**Analítica**: embudo propio en `conversion_events` (ver arriba). NO hay snippet de GA4/gtag/GTM cargado; `trackConversion` llamará a `gtag` en cuanto se agregue.
+
+## 6. Sistema de diseño
+
+Estética "gamer" oscura con neón. Variables en `src/styles/global.css` — usarlas siempre:
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--bg-base` / `--bg-surface` / `--bg-elevated` | #080810 / #0f0f1a / #16162a | fondo, tarjetas, inputs |
+| `--blue` / `--blue-glow` | #00BFFF / #00d4ff | acento principal, links, btn-primary |
+| `--purple` / `--purple-glow` | #7B2FBE / #9b3ede | acento secundario, btn-purple |
+| `--text-primary/secondary/muted` | #F0F0FF / #8888aa / #555577 | texto |
+| `--border` / `--border-accent` | #1e1e35 / #2e2e55 | bordes |
+| `--glow-blue/-purple/-dual` | box-shadows neón | hover |
+| `--radius-sm/md/lg` | 6 / 12 / 20px | |
+| `--container` | 1200px | `.container` (padding 1.5rem) |
+
+Colores semánticos hardcodeados (candidatos a variables): estrellas/pending `#f59e0b`, éxito/approved `#00ff88`, error/rejected `#ff6b6b`, texto sobre azul `#06060f`.
+
+Tipografía (Google Fonts vía `@import` en global.css): **Orbitron** (`--font-display`, h1–h3) e **Inter** (`--font-body`). Tamaños de heading con `clamp()`.
+
+Componentes/clases reutilizables:
+- Botones: `.btn` + `.btn-primary` (azul sólido) | `.btn-secondary` (outline azul) | `.btn-purple`
+- `.card`: superficie + borde; hover → borde azul, `--glow-dual`, translateY(-4px)
+- Utilidades: `.text-blue`, `.text-purple`, `.text-muted`, `.glow-blue`, `.fade-in` (animación de entrada)
+- Badges: `game-card__badge--beta|released`, `auth__badge--pending|approved|rejected`
+- Skeletons con gradiente animado (`catalog__skeleton`, `gd-skeleton`)
+- No hay componente Modal.
+
+Breakpoints usados: 900, 768, 640, 560, 480px. Respeta `prefers-reduced-motion`.
+
+## 7. Convenciones
+
+- Componentes funcionales; `function Nombre()` + `export default` al final.
+- Páginas orquestan datos/estado; componentes son presentacionales; **toda** query va en `services/supabase.js`.
+- Cada página/componente importa su propio CSS (`import '../styles/x.css'`).
+- Clases BEM con prefijo del bloque: `catalog__filter-btn--active`, `game-card__title`, `auth__field`, `gd-*` (skeleton del detalle).
+- Estado local con `useState`; `try/catch/finally` con mensajes de error amigables en español.
+- Siempre contemplar estados carga / error / vacío.
+- Todo texto de UI en español (fechas `es-MX`).
+- Accesibilidad: `aria-label` en botones de ícono, `htmlFor` en labels, `alt` en imágenes.
+- No añadir dependencias sin necesidad. No exponer secretos.
+
+## 8. Estado del MVP
+
+Completo: landing, catálogo con filtro por género, detalle, reseñas anónimas/autenticadas con estrellas, registro/login, perfil, solicitud de verificación de desarrollador.
+
+Pendiente / deuda:
+- Cargar GA4 (gtag) en `index.html`; eventos faltantes: `view_item`, `select_content` (filtro), `login`, CTA de Landing. Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
+- Publicación de juegos por desarrolladores verificados (no hay tabla/política de escritura ni UI).
+- Panel admin para aprobar verificaciones y moderar reseñas.
+- `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
+- Búsqueda por texto / orden en catálogo; paginación.
+- Ruta 404; `index.html` con `lang="en"` y `<title>dev4gaming</title>` genéricos; sin meta SEO/OG.
+- Badge "3 juegos disponibles" hardcodeado en Landing.
+- `supabase_setup.sql` y README (plantilla Vite) desactualizados.
+- RLS de reviews permite `user_id NULL` con cualquier `user_name` (suplantación de nombres); sin rate limit.

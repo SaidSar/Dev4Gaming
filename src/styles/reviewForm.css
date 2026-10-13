@@ -21,6 +21,17 @@
   margin-bottom: 1rem;
 }
 
+.review-form__success p {
+  color: inherit;
+  max-width: none;
+}
+
+.review-form__signup {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  padding: 0.5rem 1.1rem;
+}
+
 .review-form__body {
   display: flex;
   flex-direction: column;
