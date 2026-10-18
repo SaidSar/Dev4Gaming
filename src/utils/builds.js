@@ -50,3 +50,31 @@ export function isAllowedWebUrl(url) {
     return false
   }
 }
+
+// ── Subida (panel del dev) ───────────────────────────────────
+
+export const SUPABASE_MAX_BYTES = 50 * 1024 * 1024 // plan Free = bucket builds
+
+/** Extensión permitida por plataforma (igual que el bucket y el CHECK) */
+export const PLATFORM_EXT = {
+  android: ['apk'],
+  windows: ['zip'],
+  macos:   ['zip'],
+  linux:   ['zip'],
+}
+
+export function fileExtension(name) {
+  return name.includes('.') ? name.split('.').pop().toLowerCase() : ''
+}
+
+/** SHA-256 en hex calculado en el navegador (Web Crypto) */
+export async function sha256Hex(file) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/** Nombre seguro para la ruta del bucket */
+export function safeFileName(name) {
+  return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(-80)
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/Navbar'
@@ -7,14 +7,18 @@ import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import SignupInviteModal from './components/SignupInviteModal'
 import Landing from './pages/Landing'
-import Catalog from './pages/Catalog'
-import GameDetail from './pages/GameDetail'
-import Login from './pages/Login'
-import Profile from './pages/Profile'
-import VerifyDeveloper from './pages/VerifyDeveloper'
 import { captureUtm } from './utils/utm'
 import { useSignupInvite } from './hooks/useSignupInvite'
 import './styles/global.css'
+
+// Carga diferida por ruta: el bundle inicial solo lleva la landing.
+// El panel del dev además es el único que trae tus-js-client.
+const Catalog         = lazy(() => import('./pages/Catalog'))
+const GameDetail      = lazy(() => import('./pages/GameDetail'))
+const Login           = lazy(() => import('./pages/Login'))
+const Profile         = lazy(() => import('./pages/Profile'))
+const VerifyDeveloper = lazy(() => import('./pages/VerifyDeveloper'))
+const DevDashboard    = lazy(() => import('./pages/DevDashboard'))
 
 // Compatibilidad con los links viejos /games/:id
 function LegacyGameRedirect() {
@@ -45,6 +49,7 @@ function App() {
       <AuthProvider>
         <Navbar />
         <CampaignBanner source={utm.utm_source} />
+        <Suspense fallback={<div className="container auth-loading">Cargando...</div>}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/games" element={<Catalog />} />
@@ -56,6 +61,14 @@ function App() {
             element={<ProtectedRoute><Profile /></ProtectedRoute>}
           />
           <Route
+            path="/dev/dashboard"
+            element={
+              <ProtectedRoute loginTo="/login?redirect=%2Fdev%2Fdashboard">
+                <DevDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/developer/verify"
             element={
               <ProtectedRoute loginTo="/login?role=developer">
@@ -64,6 +77,7 @@ function App() {
             }
           />
         </Routes>
+        </Suspense>
         <Footer />
         <SignupInvite />
       </AuthProvider>

@@ -152,6 +152,52 @@ export async function getDownloadUrl(buildId) {
   return data
 }
 
+// ─── PANEL DEL DEV ────────────────────────────────────────
+
+/** Juegos de los que el usuario es dueño (games.owner_id) */
+export async function getMyGames(userId) {
+  const { data, error } = await supabase
+    .from('games')
+    .select('id, title, cover_url, is_academic')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Métricas por versión (RPC get_build_metrics): descargas, rating, bugs por
+ * severidad y conversión descarga → reseña. Solo responde al dueño.
+ */
+export async function getBuildMetrics(gameId) {
+  const { data, error } = await supabase.rpc('get_build_metrics', { p_game_id: gameId })
+  if (error) throw error
+  return data
+}
+
+/** Registra un build (queda en pending_review hasta publicarlo) */
+export async function createBuild(build) {
+  const { data, error } = await supabase
+    .from('builds')
+    .insert([build])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/** 'published' | 'archived' | 'pending_review' */
+export async function updateBuildStatus(buildId, status) {
+  const { error } = await supabase
+    .from('builds')
+    .update({ status })
+    .eq('id', buildId)
+
+  if (error) throw error
+}
+
 // ─── REPORTES DE BUGS ─────────────────────────────────────
 
 /**

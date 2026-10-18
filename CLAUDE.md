@@ -7,7 +7,7 @@ Proyecto escolar UAdeO (materias E-Marketing y SOA). El módulo de reseñas se p
 
 ## 1. Stack y comandos
 
-- React 19 (funcional + hooks) · Vite 8 · React Router DOM 7 · @supabase/supabase-js 2
+- React 19 (funcional + hooks) · Vite 8 · React Router DOM 7 · @supabase/supabase-js 2 · tus-js-client 4 (solo en el panel del dev)
 - JavaScript (sin TypeScript) · CSS propio por página/componente (sin Tailwind ni CSS Modules) · Oxlint
 - Sin backend propio: el frontend habla directo con Supabase (Postgres + Auth) protegido por RLS.
 
@@ -33,8 +33,9 @@ Proyecto Supabase ref: `kbygvkpvushuldyygcba`.
 ```text
 src/
 ├── main.jsx                 # createRoot + StrictMode
-├── App.jsx                  # BrowserRouter > AuthProvider > Navbar + Routes
-├── services/supabase.js     # ÚNICO punto de acceso a Supabase (cliente + todas las queries/mutaciones)
+├── App.jsx                  # BrowserRouter > AuthProvider > Navbar + Suspense > Routes. Landing eager; el resto de páginas con React.lazy
+├── services/supabase.js     # punto de acceso a Supabase (cliente + queries/mutaciones)
+├── services/buildUpload.js  # uploadBuildFile(): subida TUS al bucket builds (aparte para no cargar tus-js-client fuera del panel)
 ├── utils/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
 │   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
@@ -58,11 +59,13 @@ src/
 │   ├── GameBuilds.jsx       # recuadro de descarga de la ficha: plataforma/versión, descargar o jugar (iframe), SHA-256, Qué probar, changelog, instalación; sin builds → "Build próximamente"
 │   ├── ReviewForm.jsx       # formulario + selector de estrellas + versión (build_id); candado anónimo por sesión
 │   ├── BugReportForm.jsx    # reporte de bug (requiere sesión): versión, severidad, pasos, dispositivo autodetectado, captura opcional
+│   ├── BuildUploadForm.jsx  # "Subir nueva versión": plataforma, versión, subir (≤50 MB) / enlace externo / URL web, Qué probar, changelog, requisitos, progreso
 │   ├── BuildSelect.jsx      # select "Versión que probaste" compartido por reseña y bug
 │   └── ReviewList.jsx       # lista de reseñas (avatar inicial, fecha es-MX, estrellas)
 ├── pages/
 │   ├── Landing.jsx  Catalog.jsx  GameDetail.jsx
 │   ├── Login.jsx    Profile.jsx  VerifyDeveloper.jsx
+│   ├── DevDashboard.jsx     # /dev/dashboard: juegos propios, subir versión, publicar/archivar, métricas por versión
 ├── styles/                  # global.css + 1 CSS por página/componente
 └── assets/                  # hero.png (sin usar), vite.svg
 public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shadow-forge, pixel-siege)
@@ -72,6 +75,7 @@ supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
 supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplicada 2026-10-18)
 supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
 supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
+supabase_dev_metrics.sql     # RPC get_build_metrics (aplicada 2026-10-18)
 seed_academic_games.sql      # PLANTILLA con TODO (no aplicada): 1–3 juegos académicos
 ```
 Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
@@ -86,6 +90,7 @@ Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 | `/games/:id` | redirect | pública | `LegacyGameRedirect` → `/juego/:id` |
 | `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro); si hay sesión redirige: `/developer/verify` si `?role=developer`, si no a `?redirect=` (solo rutas internas) o `/` |
 | `/profile` | Profile | `ProtectedRoute` | rol JUGADOR / DESARROLLADOR + estado; cerrar sesión |
+| `/dev/dashboard` | DevDashboard | `ProtectedRoute loginTo="/login?redirect=%2Fdev%2Fdashboard"` | solo `role` dev_verified/admin o verificación approved; si no, CTA a verificación |
 | `/developer/verify` | VerifyDeveloper | `ProtectedRoute loginTo="/login?role=developer"` | formulario independiente/empresa |
 
 No hay ruta 404 (catch-all).
@@ -95,6 +100,7 @@ No hay ruta 404 (catch-all).
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
 - Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
 - Reseñas: `getReviewsByGame(gameId)` (incluye `build:builds(version, platform)`), `postReview({game_id, build_id, user_id, user_name, rating, comment, utm_source})` (errores: code `P0429` límite anónimo por IP, `23514` build inválido), `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Panel dev: `getMyGames(userId)` (games.owner_id), `getBuildMetrics(gameId)` (RPC), `createBuild(row)` (status pending_review), `updateBuildStatus(buildId, status)`; `uploadBuildFile({path, file, onProgress})` en services/buildUpload.js → `{promise, abort}` (TUS a `/storage/v1/upload/resumable`, trozos de 6 MB, reanuda subidas previas)
 - Bugs: `uploadBugScreenshot(gameId, userId, file)` → ruta en `bug-screenshots`, `submitBugReport(report)`
 - Builds: `getPublishedBuilds(gameId)` (solo `published`, recientes primero), `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
@@ -164,6 +170,8 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 - Anónimo: nombre opcional (máx 50); vacío → `Anonimo####` aleatorio; `user_id = null`.
 - Estrellas: 5 `<button>` con hover (`hovered || rating`), `aria-label`, `aria-pressed`; sin estrellas → "Elige de 1 a 5 estrellas para publicar."; comentario requerido (máx 500, contador).
 - Éxito: confirmación persistente + callback `onReviewPosted`; sin sesión, botón "Crear cuenta para guardar mis reseñas" → `/login?mode=register`.
+
+**Panel del dev** (`DevDashboard`): flujo de subida = SHA-256 en el navegador (`sha256Hex`, Web Crypto) → subida TUS a `{game_id}/{version}/{platform}/{archivo}` → `createBuild` en `pending_review` → el dev publica/archiva. Validación cliente: android `.apk`, windows/macos/linux `.zip`, ≤ 50 MB; si pesa más, error que sugiere "Enlace externo" (`storage_provider='external'`, URL https; el archivo local opcional solo sirve para calcular tamaño/SHA). Web: URL https de itch.io/github.io. Métricas (`get_build_metrics`, SECURITY DEFINER, solo dueño/admin): descargas y usuarios únicos, reseñas y promedio, bugs por severidad y conversión descarga→reseña (solo reseñas con cuenta). Sin juegos asignados → estado vacío (owner_id se asigna a mano, ver §4).
 
 **Bugs** (`BugReportForm`, columna izquierda de la ficha): se despliega con "Reportar"; sin sesión pide login con redirect. Severidad low/medium/high/crash (Baja/Media/Alta/Crash), descripción (requerida), pasos, `device_info` (userAgentData si existe), captura PNG/JPG/WebP ≤ 5 MB.
 
