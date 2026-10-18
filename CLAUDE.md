@@ -37,13 +37,17 @@ src/
 ├── services/supabase.js     # ÚNICO punto de acceso a Supabase (cliente + todas las queries/mutaciones)
 ├── utils/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
-│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe)
+│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) solo GA4 (no-op sin gtag)
 ├── context/
 │   ├── auth-context.js      # createContext(null)
 │   ├── AuthContext.jsx      # <AuthProvider>: sesión, profile, verification, displayName, loading, refresh
 │   └── useAuth.js           # hook useAuth() (lanza error fuera del provider)
+├── hooks/
+│   └── useSignupInvite.js   # cuándo abrir SignupInviteModal (ruta, sesión, 3 s, 1 vez por sesión)
 ├── components/
 │   ├── Navbar.jsx           # global, hamburguesa <640px, link Login/Perfil según sesión
+│   ├── SignupInviteModal.jsx # invitación a registrarse (portal, role=dialog, focus trap); montada en App vía <SignupInvite>
+│   ├── HeroInfluencer.jsx   # hero de Landing: video 9:16 del influencer + H1 + CTAs + conteos (2 col ≥900px)
 │   ├── CampaignBanner.jsx   # bajo el navbar si utm_source ∈ tiktok|instagram|discord|email; × lo oculta en la sesión
 │   ├── ProtectedRoute.jsx   # redirige a loginTo si no hay user
 │   ├── GameCover.jsx        # portada 16:10 desde cover_url; respaldo degradado + título si falta/falla
@@ -57,10 +61,11 @@ src/
 ├── styles/                  # global.css + 1 CSS por página/componente
 └── assets/                  # hero.png (sin usar), vite.svg
 public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shadow-forge, pixel-siege)
+public/media/                # ⚠ medios de PRUEBA del hero (mp4, poster svg, .vtt); config en HERO_CAMPAIGN de Landing.jsx
 supabase_setup.sql           # ⚠ desactualizado: solo games/reviews (ver §4)
 supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
 ```
-No existe carpeta `hooks/` aparte; el único hook custom es `context/useAuth.js`.
+Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 
 ## 3. Rutas (src/App.jsx)
 
@@ -70,7 +75,7 @@ No existe carpeta `hooks/` aparte; el único hook custom es `context/useAuth.js`
 | `/games` | Catalog | pública | |
 | `/juego/:id` | GameDetail | pública | 2 columnas (juego + descarga + distribución / reseñas); 1 columna <760px |
 | `/games/:id` | redirect | pública | `LegacyGameRedirect` → `/juego/:id` |
-| `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro); si hay sesión redirige (a `/developer/verify` si `?role=developer`) |
+| `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro); si hay sesión redirige: `/developer/verify` si `?role=developer`, si no a `?redirect=` (solo rutas internas) o `/` |
 | `/profile` | Profile | `ProtectedRoute` | rol JUGADOR / DESARROLLADOR + estado; cerrar sesión |
 | `/developer/verify` | VerifyDeveloper | `ProtectedRoute loginTo="/login?role=developer"` | formulario independiente/empresa |
 
@@ -79,7 +84,7 @@ No hay ruta 404 (catch-all).
 ## 4. Datos (Supabase)
 
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
-- Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`
+- Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
 - Reseñas: `getReviewsByGame(gameId)`, `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
 - Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
@@ -119,6 +124,10 @@ RLS (todas habilitadas):
 - Estrellas: 5 `<button>` con hover (`hovered || rating`), `aria-label`, `aria-pressed`; sin estrellas → "Elige de 1 a 5 estrellas para publicar."; comentario requerido (máx 500, contador).
 - Éxito: confirmación persistente + callback `onReviewPosted`; sin sesión, botón "Crear cuenta para guardar mis reseñas" → `/login?mode=register`.
 
+**Hero** (`HeroInfluencer`): autoplay muted salvo `prefers-reduced-motion`; subtítulos del `<track>` pintados a mano (mode hidden + cuechange); si el video falla muestra el poster. Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
+
+**Invitación a registrarse** (`useSignupInvite` + `SignupInviteModal`): sin sesión (espera `loading`), solo en `/games` y `/juego/:id`, 3 s tras entrar; no abre si el foco está dentro de `[data-no-signup-invite]` (ReviewForm) y reintenta cada 3 s. Una vez por sesión: sessionStorage `d4g_signup_invite`. CTAs → `/login?mode=register&redirect=…` y `/login?redirect=…`. Bloquea scroll del body y pone `inert` en `#root`. GA4: `signup_modal_view {page}`, `signup_modal_cta {action}`, `signup_modal_dismiss {method}`. `sign_up` lleva `method: 'email'`; marcarlo como evento clave se hace en GA4 Admin.
+
 **Analítica**: embudo propio en `conversion_events` (ver arriba). NO hay snippet de GA4/gtag/GTM cargado; `trackConversion` llamará a `gtag` en cuanto se agregue.
 
 ## 6. Sistema de diseño
@@ -146,7 +155,7 @@ Componentes/clases reutilizables:
 - Utilidades: `.text-blue`, `.text-purple`, `.text-muted`, `.glow-blue`, `.fade-in` (animación de entrada)
 - Badges: `game-card__badge--beta|released`, `auth__badge--pending|approved|rejected`
 - Skeletons con gradiente animado (`catalog__skeleton`, `gd-skeleton`)
-- No hay componente Modal.
+- Modal: solo `SignupInviteModal` (no hay Modal genérico).
 
 Breakpoints usados: 900, 768, 640, 560, 480px. Respeta `prefers-reduced-motion`.
 
@@ -173,6 +182,6 @@ Pendiente / deuda:
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
 - Búsqueda por texto / orden en catálogo; paginación.
 - Ruta 404; `index.html` con `lang="en"` y `<title>dev4gaming</title>` genéricos; sin meta SEO/OG.
-- Badge "3 juegos disponibles" hardcodeado en Landing.
+- Hero: reemplazar medios de prueba de `public/media/` por el MP4/poster/.vtt reales del influencer y ajustar `HERO_CAMPAIGN`.
 - `supabase_setup.sql` y README (plantilla Vite) desactualizados.
 - RLS de reviews permite `user_id NULL` con cualquier `user_name` (suplantación de nombres); sin rate limit.

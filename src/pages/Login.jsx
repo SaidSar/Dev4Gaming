@@ -14,9 +14,15 @@ function friendlyError(err) {
   return 'No se pudo completar la solicitud. Intenta de nuevo.'
 }
 
+// Solo rutas internas: evita redirecciones abiertas (?redirect=https://... o //host)
+function safeRedirect(value) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : null
+}
+
 function Login() {
   const [params] = useSearchParams()
   const wantsDev = params.get('role') === 'developer'
+  const redirect = safeRedirect(params.get('redirect'))
   const { user, loading } = useAuth()
 
   const [mode, setMode] = useState(params.get('mode') === 'register' ? 'register' : 'login') // 'login' | 'register'
@@ -26,7 +32,7 @@ function Login() {
   const [info, setInfo]   = useState(null)
 
   if (!loading && user) {
-    return <Navigate to={wantsDev ? '/developer/verify' : '/'} replace />
+    return <Navigate to={wantsDev ? '/developer/verify' : redirect ?? '/'} replace />
   }
 
   const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
@@ -54,7 +60,8 @@ function Login() {
           displayName: form.displayName.trim(),
           utmSource: getUtm().utm_source ?? null,
         })
-        trackConversion('sign_up')
+        // GA4: sign_up es evento recomendado; márcalo como evento clave en Admin
+        trackConversion('sign_up', { method: 'email' })
         if (!data.session) {
           setInfo('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.')
           setMode('login')

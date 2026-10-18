@@ -5,6 +5,7 @@ import Navbar from './components/Navbar'
 import CampaignBanner from './components/CampaignBanner'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
+import SignupInviteModal from './components/SignupInviteModal'
 import Landing from './pages/Landing'
 import Catalog from './pages/Catalog'
 import GameDetail from './pages/GameDetail'
@@ -12,12 +13,27 @@ import Login from './pages/Login'
 import Profile from './pages/Profile'
 import VerifyDeveloper from './pages/VerifyDeveloper'
 import { captureUtm } from './utils/utm'
+import { useSignupInvite } from './hooks/useSignupInvite'
 import './styles/global.css'
 
 // Compatibilidad con los links viejos /games/:id
 function LegacyGameRedirect() {
   const { id } = useParams()
   return <Navigate to={`/juego/${id}`} replace />
+}
+
+// Invitación a registrarse; el hook decide ruta, sesión y momento
+function SignupInvite() {
+  const { open, registerHref, loginHref, dismiss, handleCta } = useSignupInvite()
+  return (
+    <SignupInviteModal
+      open={open}
+      registerHref={registerHref}
+      loginHref={loginHref}
+      onDismiss={dismiss}
+      onCta={handleCta}
+    />
+  )
 }
 
 function App() {
@@ -49,6 +65,7 @@ function App() {
           />
         </Routes>
         <Footer />
+        <SignupInvite />
       </AuthProvider>
     </BrowserRouter>
   )

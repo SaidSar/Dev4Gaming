@@ -1,0 +1,209 @@
+/* ══════════════════════════════════════════════
+   SIGNUP INVITE MODAL — invitación a crear cuenta
+   Usa la identidad --hero-* (global.css).
+══════════════════════════════════════════════ */
+
+.signup-invite {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(4, 5, 12, 0.78);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: signup-invite-fade 0.28s ease-out;
+}
+
+.signup-invite__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 36px 36px 28px;
+  border-radius: 20px;
+  background: var(--hero-surface);
+  border: 1px solid var(--hero-border-strong);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: var(--font-hero-body);
+  color: var(--hero-text);
+  animation: signup-invite-in 0.28s ease-out;
+}
+
+@keyframes signup-invite-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes signup-invite-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.signup-invite__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  color: var(--hero-text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.signup-invite__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Logotipo (igual que .navbar__logo) */
+.signup-invite__logo {
+  align-self: flex-start;
+  max-width: none;
+  /* alto mínimo de la X para que no se encimen */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+.signup-invite__logo-accent { color: var(--blue); }
+
+.signup-invite__text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signup-invite__title {
+  /* deja espacio para la X */
+  padding-right: 32px;
+  font-family: var(--font-hero-display);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 6.5vw, 1.875rem);
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.signup-invite__title-accent { color: var(--hero-accent); }
+
+.signup-invite__desc {
+  max-width: none;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #D3D9EA;
+}
+
+.signup-invite__benefits {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signup-invite__benefit {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--hero-text);
+}
+
+.signup-invite__benefit svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--hero-accent);
+}
+
+.signup-invite__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.signup-invite__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 10px;
+  background: var(--hero-action);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: filter 0.2s;
+}
+
+.signup-invite__cta:hover {
+  color: #fff;
+  filter: brightness(1.12);
+}
+
+.signup-invite__login {
+  max-width: none;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--hero-text-soft);
+}
+
+.signup-invite__login a {
+  color: #7FB2FF;
+  font-weight: 600;
+}
+
+.signup-invite__login a:hover { color: #B9D4FF; }
+
+.signup-invite__skip {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--hero-text-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+
+.signup-invite__skip:hover { color: #fff; }
+
+.signup-invite a:focus-visible,
+.signup-invite button:focus-visible {
+  outline: 2px solid var(--hero-accent);
+  outline-offset: 3px;
+}
+
+/* ── Celular: margen de 16px y botones a ancho completo ── */
+@media (max-width: 560px) {
+  .signup-invite { padding: 16px; }
+
+  .signup-invite__dialog {
+    padding: 28px 20px 20px;
+    gap: 18px;
+  }
+
+  .signup-invite__skip { align-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signup-invite,
+  .signup-invite__dialog {
+    animation: none;
+  }
+}

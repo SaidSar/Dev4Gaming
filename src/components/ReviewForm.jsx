@@ -59,7 +59,7 @@ function ReviewForm({ gameId, onReviewPosted }) {
   }
 
   return (
-    <div className="review-form card">
+    <div className="review-form card" data-no-signup-invite>
       <h3 className="review-form__title">Deja tu reseña</h3>
 
       {success && (
