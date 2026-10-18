@@ -6,6 +6,7 @@ import { useAuth } from '../context/useAuth'
 import { getMyGames, getBuildMetrics, createBuild, updateBuildStatus } from '../services/supabase'
 import { uploadBuildFile } from '../services/buildUpload'
 import { PLATFORM_LABEL, sha256Hex, safeFileName } from '../utils/builds'
+import { isVerifiedDev } from '../utils/roles'
 import BuildUploadForm from '../components/BuildUploadForm'
 import '../styles/devDashboard.css'
 
@@ -30,8 +31,7 @@ function percent(value) {
 
 function DevDashboard() {
   const { user, profile, verification, loading: authLoading } = useAuth()
-  const isVerifiedDev = ['dev_verified', 'admin'].includes(profile?.role)
-    || verification?.status === 'approved'
+  const verifiedDev = isVerifiedDev(profile, verification)
 
   const [games, setGames]       = useState([])
   const [gameId, setGameId]     = useState('')
@@ -42,7 +42,7 @@ function DevDashboard() {
 
   // Juegos del dev
   useEffect(() => {
-    if (authLoading || !isVerifiedDev) return
+    if (authLoading || !verifiedDev) return
     let active = true
     getMyGames(user.id)
       .then(data => {
@@ -53,7 +53,7 @@ function DevDashboard() {
       })
       .catch(() => { if (active) { setError('No se pudieron cargar tus juegos.'); setLoading(false) } })
     return () => { active = false }
-  }, [authLoading, isVerifiedDev, user])
+  }, [authLoading, verifiedDev, user])
 
   // Métricas del juego elegido. Para recargar: reloadMetrics() (evento)
   const [reloadKey, setReloadKey] = useState(0)
@@ -134,7 +134,7 @@ function DevDashboard() {
   // ── Estados de acceso ──
   if (authLoading) return <div className="container auth-loading">Cargando...</div>
 
-  if (!isVerifiedDev) {
+  if (!verifiedDev) {
     return (
       <main className="dev-dashboard container fade-in">
         <h1 className="dev-dashboard__title">Panel del desarrollador</h1>

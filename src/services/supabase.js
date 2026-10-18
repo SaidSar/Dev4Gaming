@@ -250,12 +250,14 @@ export async function getCurrentUserId() {
 
 // ─── AUTH ─────────────────────────────────────────────────
 
-// utm_source viaja en los metadatos; el trigger handle_new_user() lo copia a profiles.
-export async function signUp({ email, password, displayName, utmSource = null }) {
+// utm_source y signup_intent viajan en los metadatos; el trigger handle_new_user()
+// los copia a profiles. signup_intent ('player'|'developer') no da permisos:
+// el rol de dev solo cambia al enviar/aprobar la verificación.
+export async function signUp({ email, password, displayName, utmSource = null, signupIntent = 'player' }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName, utm_source: utmSource } },
+    options: { data: { display_name: displayName, utm_source: utmSource, signup_intent: signupIntent } },
   })
   if (error) throw error
   return data

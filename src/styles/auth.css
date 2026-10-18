@@ -129,3 +129,59 @@
 .auth__badge--rejected { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); }
 
 .auth-loading { padding: 4rem 1.5rem; color: var(--text-muted); }
+
+/* ── Selector de rol en el registro ── */
+.auth__intent {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth__intent legend {
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.auth__intent-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.7rem 0.85rem 0.7rem 2.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+  background-color: var(--bg-elevated);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.auth__intent-option input {
+  position: absolute;
+  left: 0.8rem;
+  top: 0.95rem;
+  width: auto;
+  accent-color: var(--blue);
+}
+
+.auth__intent-option:has(input:checked) { border-color: var(--blue); }
+.auth__intent-option:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.auth__intent-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth__intent-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.auth__intent-note {
+  font-size: 0.8rem;
+  color: var(--blue);
+  max-width: none;
+}

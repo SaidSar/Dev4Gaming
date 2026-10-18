@@ -38,6 +38,7 @@ src/
 ├── services/buildUpload.js  # uploadBuildFile(): subida TUS al bucket builds (aparte para no cargar tus-js-client fuera del panel)
 ├── utils/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
+│   ├── roles.js             # isVerifiedDev, devEntryPath, safeRedirect, postLoginPath (destino tras login según rol)
 │   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
 │   ├── builds.js            # PLATFORM_LABEL/ORDER, formatBytes, detectPlatform, isAllowedWebUrl
 │   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) solo GA4 (no-op sin gtag)
@@ -48,7 +49,7 @@ src/
 ├── hooks/
 │   └── useSignupInvite.js   # cuándo abrir SignupInviteModal (ruta, sesión, 3 s, 1 vez por sesión)
 ├── components/
-│   ├── Navbar.jsx           # global, hamburguesa <640px, link Login/Perfil según sesión
+│   ├── Navbar.jsx           # global, hamburguesa <640px; "Desarrolladores" (o "Mi panel" si es dev verificado) y Login/Perfil según sesión
 │   ├── SignupInviteModal.jsx # invitación a registrarse (portal, role=dialog, focus trap); montada en App vía <SignupInvite>
 │   ├── HeroInfluencer.jsx   # hero de Landing: video 9:16 del influencer + H1 + CTAs + conteos (2 col ≥900px)
 │   ├── CampaignBanner.jsx   # bajo el navbar si utm_source ∈ tiktok|instagram|discord|email; × lo oculta en la sesión
@@ -65,6 +66,7 @@ src/
 ├── pages/
 │   ├── Landing.jsx  Catalog.jsx  GameDetail.jsx
 │   ├── Login.jsx    Profile.jsx  VerifyDeveloper.jsx
+│   ├── Developers.jsx       # /desarrolladores: landing para devs (beneficios, cómo funciona, confianza); CTA según estado
 │   ├── DevDashboard.jsx     # /dev/dashboard: juegos propios, subir versión, publicar/archivar, métricas por versión
 ├── styles/                  # global.css + 1 CSS por página/componente
 └── assets/                  # hero.png (sin usar), vite.svg
@@ -84,11 +86,12 @@ Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 
 | Ruta | Página | Acceso | Notas |
 |---|---|---|---|
-| `/` | Landing | pública | CTA "Soy desarrollador" → `/login?role=developer`, `/developer/verify` o `/profile` según estado |
+| `/` | Landing | pública | CTA del hero "Soy desarrollador" → `devEntryPath()`; franja secundaria `.dev-strip` bajo el hero → `/desarrolladores` |
+| `/desarrolladores` | Developers | pública | CTA `devEntryPath()`: registro con rol dev → verificación → `/profile` (pendiente) → `/dev/dashboard` |
 | `/games` | Catalog | pública | |
 | `/juego/:id` | GameDetail | pública | 2 columnas (juego + descarga + distribución / reseñas); 1 columna <760px |
 | `/games/:id` | redirect | pública | `LegacyGameRedirect` → `/juego/:id` |
-| `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro); si hay sesión redirige: `/developer/verify` si `?role=developer`, si no a `?redirect=` (solo rutas internas) o `/` |
+| `/login` | Login | pública | tabs login/registro (`?mode=register` abre registro). Registro con selector "Quiero probar juegos" / "Quiero publicar mi juego" (`?role=developer` preselecciona dev) → `signup_intent`. Con sesión redirige con `postLoginPath()`: dev (param o intención) → verificación/perfil/panel; si no `?redirect=` (solo rutas internas); si no por rol: panel, perfil, verificación pendiente o `/games` |
 | `/profile` | Profile | `ProtectedRoute` | rol JUGADOR / DESARROLLADOR + estado; cerrar sesión |
 | `/dev/dashboard` | DevDashboard | `ProtectedRoute loginTo="/login?redirect=%2Fdev%2Fdashboard"` | solo `role` dev_verified/admin o verificación approved; si no, CTA a verificación |
 | `/developer/verify` | VerifyDeveloper | `ProtectedRoute loginTo="/login?role=developer"` | formulario independiente/empresa |
@@ -104,7 +107,7 @@ Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelv
 - Bugs: `uploadBugScreenshot(gameId, userId, file)` → ruta en `bug-screenshots`, `submitBugReport(report)`
 - Builds: `getPublishedBuilds(gameId)` (solo `published`, recientes primero), `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
-- Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
+- Auth: `signUp({email,password,displayName,utmSource,signupIntent})` (guarda `display_name`, `utm_source` y `signup_intent` en metadata), `signIn`, `signOut`
 - Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
 
 Esquema real en la BD (public):

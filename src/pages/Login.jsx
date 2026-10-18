@@ -4,7 +4,13 @@ import { signIn, signUp } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { getUtm } from '../utils/utm'
 import { trackConversion } from '../utils/track'
+import { safeRedirect, postLoginPath } from '../utils/roles'
 import '../styles/auth.css'
+
+const INTENTS = [
+  { value: 'player',    title: 'Quiero probar juegos',  desc: 'Descarga betas, califícalas y reporta bugs.' },
+  { value: 'developer', title: 'Quiero publicar mi juego', desc: 'Sube tus builds y recibe feedback por versión.' },
+]
 
 function friendlyError(err) {
   const msg = err?.message || ''
@@ -14,25 +20,23 @@ function friendlyError(err) {
   return 'No se pudo completar la solicitud. Intenta de nuevo.'
 }
 
-// Solo rutas internas: evita redirecciones abiertas (?redirect=https://... o //host)
-function safeRedirect(value) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : null
-}
-
 function Login() {
   const [params] = useSearchParams()
-  const wantsDev = params.get('role') === 'developer'
   const redirect = safeRedirect(params.get('redirect'))
-  const { user, loading } = useAuth()
+  const { user, profile, verification, loading } = useAuth()
 
   const [mode, setMode] = useState(params.get('mode') === 'register' ? 'register' : 'login') // 'login' | 'register'
   const [form, setForm] = useState({ displayName: '', email: '', password: '' })
   const [busy, setBusy]   = useState(false)
   const [error, setError] = useState(null)
   const [info, setInfo]   = useState(null)
+  // Rol elegido al registrarse: define profiles.signup_intent y el destino
+  const [intent, setIntent] = useState(params.get('role') === 'developer' ? 'developer' : 'player')
+  const wantsDev = params.get('role') === 'developer' || (mode === 'register' && intent === 'developer')
 
+  // Con sesión (y perfil cargado) se va al destino según el rol
   if (!loading && user) {
-    return <Navigate to={wantsDev ? '/developer/verify' : redirect ?? '/'} replace />
+    return <Navigate to={postLoginPath({ wantsDev, redirect, profile, verification })} replace />
   }
 
   const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
@@ -59,6 +63,7 @@ function Login() {
           password: form.password,
           displayName: form.displayName.trim(),
           utmSource: getUtm().utm_source ?? null,
+          signupIntent: intent,
         })
         // GA4: sign_up es evento recomendado; márcalo como evento clave en Admin
         trackConversion('sign_up', { method: 'email' })
@@ -80,7 +85,7 @@ function Login() {
       <div className="auth__card">
         <h1 className="auth__title">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h1>
 
-        {wantsDev && (
+        {params.get('role') === 'developer' && (
           <p className="auth__hint">
             Entra o regístrate para verificarte como desarrollador.
           </p>
@@ -104,6 +109,30 @@ function Login() {
         </div>
 
         <form className="auth__form" onSubmit={handleSubmit} noValidate>
+          {mode === 'register' && (
+            <fieldset className="auth__intent">
+              <legend>¿Qué quieres hacer en Dev4Gaming?</legend>
+              {INTENTS.map(opt => (
+                <label key={opt.value} className="auth__intent-option">
+                  <input
+                    type="radio"
+                    name="intent"
+                    value={opt.value}
+                    checked={intent === opt.value}
+                    onChange={() => setIntent(opt.value)}
+                  />
+                  <span className="auth__intent-title">{opt.title}</span>
+                  <span className="auth__intent-desc">{opt.desc}</span>
+                </label>
+              ))}
+              {intent === 'developer' && (
+                <p className="auth__intent-note">
+                  Después de crear tu cuenta te pediremos los datos para verificarte como desarrollador.
+                </p>
+              )}
+            </fieldset>
+          )}
+
           {mode === 'register' && (
             <div className="auth__field">
               <label htmlFor="au-name">Nombre</label>

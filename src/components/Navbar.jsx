@@ -2,11 +2,13 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { isVerifiedDev } from '../utils/roles'
 import '../styles/navbar.css'
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { user, displayName, loading } = useAuth()
+  const { user, displayName, loading, profile, verification } = useAuth()
+  const verifiedDev = isVerifiedDev(profile, verification)
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -40,6 +42,19 @@ function Navbar() {
               Catálogo
             </NavLink>
           </li>
+          {!loading && (verifiedDev ? (
+            <li>
+              <NavLink to="/dev/dashboard" onClick={closeMenu}>
+                Mi panel
+              </NavLink>
+            </li>
+          ) : (
+            <li>
+              <NavLink to="/desarrolladores" onClick={closeMenu}>
+                Desarrolladores
+              </NavLink>
+            </li>
+          ))}
           {!loading && (
             <li>
               <NavLink to={user ? '/profile' : '/login'} onClick={closeMenu}>

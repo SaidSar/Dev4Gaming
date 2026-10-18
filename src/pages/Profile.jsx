@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { isVerifiedDev } from '../utils/roles'
 import { signOut } from '../services/supabase'
 import '../styles/auth.css'
 
@@ -7,7 +8,8 @@ const STATUS_LABEL = { pending: 'EN REVISIÓN', approved: 'VERIFICADO', rejected
 const TYPE_LABEL   = { independent: 'Independiente', company: 'Empresa / estudio' }
 
 function Profile() {
-  const { user, displayName, verification } = useAuth()
+  const { user, displayName, profile, verification } = useAuth()
+  const verifiedDev = isVerifiedDev(profile, verification)
   const navigate = useNavigate()
 
   async function handleSignOut() {
@@ -46,8 +48,13 @@ function Profile() {
         </div>
 
         <div className="auth__actions">
+          {verifiedDev && (
+            <Link to="/dev/dashboard" className="btn btn-primary">Ir a mi panel</Link>
+          )}
           {!verification && (
-            <Link to="/developer/verify" className="btn btn-secondary">Soy desarrollador</Link>
+            <Link to="/developer/verify" className="btn btn-secondary">
+              {profile?.signup_intent === 'developer' ? 'Completar mi verificación' : 'Soy desarrollador'}
+            </Link>
           )}
           {verification?.status === 'rejected' && (
             <Link to="/developer/verify" className="btn btn-secondary">Reenviar verificación</Link>

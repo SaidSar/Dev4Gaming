@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { getHomeStats } from '../services/supabase'
+import { devEntryPath } from '../utils/roles'
 import Icon from '../components/Icon'
 import HeroInfluencer from '../components/HeroInfluencer'
 import '../styles/landing.css'
@@ -46,10 +47,8 @@ const FEATURES = [
 
 
 function Landing() {
-  const { user, verification } = useAuth()
-  const devPath = !user
-    ? '/login?role=developer'
-    : verification ? '/profile' : '/developer/verify'
+  const { user, profile, verification } = useAuth()
+  const devPath = devEntryPath(user, profile, verification)
 
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -72,6 +71,18 @@ function Landing() {
         stats={stats}
         statsLoading={statsLoading}
       />
+
+      {/* ══ FRANJA DEVS (secundaria: no compite con el CTA de jugador) ══ */}
+      <aside className="dev-strip" aria-label="Para desarrolladores">
+        <div className="container dev-strip__inner">
+          <p className="dev-strip__text">
+            <strong>¿Desarrollas juegos?</strong> Publica tu beta y recibe reseñas y bugs por versión.
+          </p>
+          <Link to="/desarrolladores" className="dev-strip__link">
+            Conoce cómo funciona <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </aside>
 
       {/* ══ FEATURES ══════════════════════════════════ */}
       <section className="features">

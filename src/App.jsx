@@ -19,6 +19,7 @@ const Login           = lazy(() => import('./pages/Login'))
 const Profile         = lazy(() => import('./pages/Profile'))
 const VerifyDeveloper = lazy(() => import('./pages/VerifyDeveloper'))
 const DevDashboard    = lazy(() => import('./pages/DevDashboard'))
+const Developers      = lazy(() => import('./pages/Developers'))
 
 // Compatibilidad con los links viejos /games/:id
 function LegacyGameRedirect() {
@@ -53,6 +54,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/games" element={<Catalog />} />
+          <Route path="/desarrolladores" element={<Developers />} />
           <Route path="/juego/:id" element={<GameDetail />} />
           <Route path="/games/:id" element={<LegacyGameRedirect />} />
           <Route path="/login" element={<Login />} />
