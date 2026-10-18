@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 380 676">
+  <!-- PRUEBA: reemplazar por un fotograma real del video del influencer (JPG/WebP 1080x1920). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#1C1F4A"/><stop offset="0.6" stop-color="#10132C"/><stop offset="1" stop-color="#0A0C1E"/>
+    </linearGradient>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
+  </defs>
+  <rect width="380" height="676" fill="url(#bg)"/>
+  <circle cx="190" cy="210" r="120" fill="#8B5CF6" opacity="0.6" filter="url(#blur)"/>
+  <rect x="242" y="176" width="110" height="72" rx="8" fill="#1A2150" stroke="#2E7BFF" stroke-width="2"/>
+  <path transform="translate(280 195) scale(1.4)" d="M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4z" fill="none" stroke="#7FB2FF" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M70 676 C70 540 120 470 190 470 C260 470 310 540 310 676 Z" fill="#2B2F66"/>
+  <rect x="166" y="420" width="48" height="60" rx="18" fill="#C79A7A"/>
+  <ellipse cx="190" cy="360" rx="78" ry="90" fill="#D6A985"/>
+  <path d="M108 342 C108 270 160 252 196 254 C246 256 278 290 274 346 C262 316 230 300 190 302 C152 304 124 318 108 342 Z" fill="#1E1A2E"/>
+  <path d="M100 352 C100 300 140 270 190 270 C240 270 280 300 280 352" fill="none" stroke="#8B5CF6" stroke-width="12" stroke-linecap="round"/>
+  <rect x="88" y="336" width="26" height="46" rx="10" fill="#8B5CF6"/>
+  <rect x="266" y="336" width="26" height="46" rx="10" fill="#8B5CF6"/>
+</svg>

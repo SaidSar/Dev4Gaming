@@ -89,6 +89,22 @@ export async function getReviewStats() {
   return stats
 }
 
+/**
+ * Conteos para el hero de la portada: juegos en beta y reseñas totales.
+ * Usa `head: true` para que Supabase devuelva solo el conteo, sin filas.
+ * @returns {{betaGames: number, reviews: number}}
+ */
+export async function getHomeStats() {
+  const [games, reviews] = await Promise.all([
+    supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'beta'),
+    supabase.from('reviews').select('id', { count: 'exact', head: true }),
+  ])
+
+  if (games.error) throw games.error
+  if (reviews.error) throw reviews.error
+  return { betaGames: games.count ?? 0, reviews: reviews.count ?? 0 }
+}
+
 // ─── CONVERSIONES ─────────────────────────────────────────
 
 /**

@@ -1,7 +1,27 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { getHomeStats } from '../services/supabase'
 import Icon from '../components/Icon'
+import HeroInfluencer from '../components/HeroInfluencer'
 import '../styles/landing.css'
+
+// Campaña del hero. ⚠ Archivos de PRUEBA en public/media/:
+// reemplaza hero-influencer.mp4 por el MP4 real del influencer (vertical 9:16,
+// H.264), hero-influencer-poster.svg por un fotograma real (JPG/WebP) y
+// hero-influencer.es.vtt por los subtítulos reales; luego ajusta handle,
+// nombre, juego, duración y reviewHref (p. ej. la URL de su reseña en TikTok).
+const HERO_CAMPAIGN = {
+  videoSrc:         '/media/hero-influencer.mp4',
+  posterSrc:        '/media/hero-influencer-poster.svg',
+  captionsSrc:      '/media/hero-influencer.es.vtt',
+  influencerHandle: '@influencer',
+  influencerName:   'Influencer',
+  gameId:           '5d2be034-b5a1-4116-9c61-6642fcddb0b4', // Shadow Forge
+  gameTitle:        'Shadow Forge',
+  duration:         '0:30',
+  reviewHref:       '/juego/5d2be034-b5a1-4116-9c61-6642fcddb0b4',
+}
 
 const FEATURES = [
   {
@@ -30,42 +50,28 @@ function Landing() {
   const devPath = !user
     ? '/login?role=developer'
     : verification ? '/profile' : '/developer/verify'
+
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    getHomeStats()
+      .then((data) => { if (active) setStats(data) })
+      .catch((err) => console.warn('[landing] no se pudieron cargar los conteos', err))
+      .finally(() => { if (active) setStatsLoading(false) })
+    return () => { active = false }
+  }, [])
+
   return (
     <main className="landing">
 
-      {/* ══ HERO ══════════════════════════════════════ */}
-      <section className="hero">
-        <div className="hero__glow hero__glow--blue"   aria-hidden="true" />
-        <div className="hero__glow hero__glow--purple" aria-hidden="true" />
-
-        <div className="container hero__content fade-in">
-
-          <div className="hero__badge">
-            <Icon name="gamepad" size={16} className="hero__badge-icon" />
-            Beta abierta — 3 juegos disponibles
-          </div>
-
-          <h1 className="hero__title">
-            Los mejores juegos<br />
-            <span className="text-blue">nacen de tu opinión.</span>
-          </h1>
-
-          <p className="hero__subtitle">
-            Plataforma para desarrolladores indie y jugadores que quieren
-            moldear el futuro del gaming antes del lanzamiento.
-          </p>
-
-          <div className="hero__ctas">
-            <Link to="/games" className="btn btn-primary">
-              Explorar juegos
-            </Link>
-            <Link to={devPath} className="btn btn-secondary">
-              Soy desarrollador
-            </Link>
-          </div>
-
-        </div>
-      </section>
+      <HeroInfluencer
+        {...HERO_CAMPAIGN}
+        developerHref={devPath}
+        stats={stats}
+        statsLoading={statsLoading}
+      />
 
       {/* ══ FEATURES ══════════════════════════════════ */}
       <section className="features">

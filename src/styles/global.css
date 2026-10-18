@@ -1,5 +1,5 @@
 /* Variables globales y reset — paleta gamer */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 /* ══════════════════════════════════════════════
    VARIABLES — Paleta Dev4Gaming
@@ -42,6 +42,21 @@
   /* Tipografía */
   --font-display: 'Orbitron', sans-serif;
   --font-body:    'Inter', sans-serif;
+
+  /* Identidad nueva: HeroInfluencer y SignupInviteModal */
+  --hero-bg:          #07080F;
+  --hero-grid:        rgba(46, 123, 255, 0.07);
+  --hero-action:      #2E6BF0;  /* CTA primario (blanco encima: 4.7:1) */
+  --hero-accent:      #5C9BFF;
+  --hero-violet:      #8B5CF6;
+  --hero-violet-soft: #C8B4FF;
+  --hero-text:        #EEF1FA;
+  --hero-text-soft:   #AEB7D2;
+  --hero-border:      #2A3366;
+  --hero-surface:     #10142A;  /* tarjetas / modal */
+  --hero-border-strong: #2E3A78;
+  --font-hero-display: 'Chakra Petch', sans-serif;
+  --font-hero-body:    'IBM Plex Sans', system-ui, sans-serif;
 }
 
 /* ══════════════════════════════════════════════

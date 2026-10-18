@@ -4,6 +4,21 @@ import { insertConversionEvent, getCurrentUserId } from '../services/supabase'
 import { getUtm } from './utm'
 
 /**
+ * Evento solo de GA4 (no va a conversion_events). No hace nada si gtag
+ * no está cargado — hoy index.html no incluye el snippet de GA4.
+ * @param {string} event - p. ej. 'hero_video_play'
+ * @param {object} params
+ */
+export function trackEvent(event, params = {}) {
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
+  try {
+    window.gtag('event', event, { ...getUtm(), ...params })
+  } catch (err) {
+    console.warn(`[track] gtag falló para "${event}"`, err)
+  }
+}
+
+/**
  * @param {'sign_up'|'submit_review'|'download_click'|'play_click'} event
  * @param {object} extra - p. ej. { game_id, rating }
  */
