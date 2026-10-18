@@ -303,7 +303,11 @@ export async function signUp({ email, password, displayName, utmSource = null, s
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName, utm_source: utmSource, signup_intent: signupIntent } },
+    options: {
+      // El enlace del correo vuelve al dominio actual (localhost en dev, Vercel en producción)
+      emailRedirectTo: window.location.origin,
+      data: { display_name: displayName, utm_source: utmSource, signup_intent: signupIntent },
+    },
   })
   if (error) throw error
   return data
