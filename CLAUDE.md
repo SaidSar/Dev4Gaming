@@ -64,6 +64,7 @@ public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shado
 public/media/                # ⚠ medios de PRUEBA del hero (mp4, poster svg, .vtt); config en HERO_CAMPAIGN de Landing.jsx
 supabase_setup.sql           # ⚠ desactualizado: solo games/reviews (ver §4)
 supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
+supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplicada 2026-10-18)
 ```
 Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 
@@ -91,9 +92,13 @@ Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelv
 - Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
 
 Esquema real en la BD (public):
-- `games`: id uuid PK, title, description, genre, developer_name, image_url (placeholders, ya no se usa), status ('beta'|'released', default beta), created_at, cover_url, platform, download_size, version
-- `reviews`: id, game_id → games (cascade), user_name, rating 1–5, comment, created_at, **user_id uuid nullable → auth.users**, utm_source
-- `profiles`: id → auth.users PK, display_name, created_at, utm_source. Se crea por trigger `on_auth_user_created` → `handle_new_user()` (copia `display_name` y `utm_source` de raw_user_meta_data)
+- `games`: id uuid PK, title, description, genre, developer_name, image_url (placeholders, ya no se usa), status ('beta'|'released', default beta), created_at, cover_url, platform, download_size, version, is_academic (default false), credits, owner_id → auth.users (null = nadie sube builds; los 3 de ejemplo)
+- `builds`: id, game_id → games (cascade), version, platform ('android'|'windows'|'linux'|'macos'|'web'), storage_provider ('supabase'|'r2'|'external'), file_path, web_entry_url (solo web; https de itch.io/github.io), size_bytes, sha256 (hex 64), changelog, test_focus, min_requirements, status ('pending_review'|'published'|'archived'), created_at. UNIQUE(game_id, version, platform). En Supabase solo .apk/.zip ≤ 50 MB (plan Free)
+- `downloads`: id bigserial, build_id → builds, user_id, created_at. **Solo la escribe la Edge Function** (service role)
+- `bug_reports`: id, game_id, build_id (null = versión no especificada), user_id (default auth.uid()), description, steps_to_reproduce, severity ('low'|'medium'|'high'|'crash'), device_info jsonb, screenshot_path, status ('open'|'resolved'), created_at
+- `private.app_secrets` (esquema no expuesto por la API): `review_ip_salt`, generado aleatorio al migrar
+- `reviews`: id, game_id → games (cascade), user_name, rating 1–5, comment, created_at, **user_id uuid nullable → auth.users**, utm_source, build_id → builds (null = "Versión no especificada"), client_ip_hash (HMAC-SHA256 con salt secreto). Trigger `reviews_before_insert`: valida que el build sea del juego y esté publicado; máx. 5 reseñas anónimas por juego, IP y 24 h
+- `profiles`: id → auth.users PK, display_name, created_at, utm_source, **role** ('player'|'dev_pending'|'dev_verified'|'admin', default player), **signup_intent** ('player'|'developer'|null). Se crea por trigger `on_auth_user_created` → `handle_new_user()` (copia `display_name`, `utm_source` y `signup_intent` de raw_user_meta_data; nunca asigna role). `role` lo mantiene el trigger `on_dev_verification_change` (pending→dev_pending, approved→dev_verified, rejected→player; no toca admin)
 - `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
 - `developer_verifications`: user_id PK → auth.users, type ('independent'|'company'), legal_name, website, portfolio_url, tax_id, status ('pending'|'approved'|'rejected'), created_at
 
@@ -103,6 +108,24 @@ RLS (todas habilitadas):
 - profiles: SELECT solo el propio.
 - developer_verifications: SELECT/INSERT propio (status='pending'); UPDATE propio si no está `approved` y deja `pending`. La aprobación es manual (dashboard).
 - conversion_events: INSERT a anon/authenticated si `user_id IS NULL OR user_id = auth.uid()`. Sin SELECT (no existe rol admin): se lee solo desde dashboard/service_role.
+- builds: SELECT si `published` o `owns_game()`; INSERT/UPDATE si `is_verified_dev() AND owns_game()`; sin DELETE (se archiva).
+- downloads: RLS sin políticas (a propósito): ningún cliente lee ni escribe.
+- bug_reports: INSERT autenticado (`user_id = auth.uid()`, build publicado del mismo juego); SELECT propios o de mis juegos; UPDATE el dev dueño.
+- Helpers SECURITY DEFINER: `is_verified_dev()` (verificación approved o role admin), `owns_game(game_id)`, `build_is_published_for(build_id, game_id)`; conservan EXECUTE para anon/authenticated porque las usan las políticas. Las funciones de trigger no son invocables por RPC.
+
+**Operación manual (dashboard → SQL Editor):**
+```sql
+-- Aprobar a un dev (el trigger pone profiles.role = 'dev_verified')
+update public.developer_verifications set status = 'approved'
+ where user_id = (select id from auth.users where email = 'correo@ejemplo.com');
+
+-- Asignar dueño a un juego (p. ej. los académicos) para que pueda subir builds
+update public.games set owner_id = (select id from auth.users where email = 'correo@ejemplo.com')
+ where id = '<uuid del juego>';
+
+-- Admin (salta la verificación en is_verified_dev)
+update public.profiles set role = 'admin' where id = '<uuid del usuario>';
+```
 
 `supabase_setup.sql` NO incluye profiles, developer_verifications, reviews.user_id, el trigger ni las políticas nuevas; lo del embudo está en `supabase_funnel.sql`. Si cambias esquema, actualiza ese SQL, este archivo y los consumidores.
 
