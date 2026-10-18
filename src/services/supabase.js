@@ -105,6 +105,30 @@ export async function getHomeStats() {
   return { betaGames: games.count ?? 0, reviews: reviews.count ?? 0 }
 }
 
+// ─── BUILDS Y DESCARGAS ───────────────────────────────────
+
+/**
+ * Pide a la Edge Function `get-download-url` un enlace firmado (300 s).
+ * Requiere sesión; la función registra la descarga en `downloads`.
+ * @param {string} buildId - UUID del build publicado
+ * @returns {{url: string, expires_in: number|null, sha256: string|null,
+ *            size_bytes: number|null, version: string, platform: string}}
+ */
+export async function getDownloadUrl(buildId) {
+  const { data, error } = await supabase.functions.invoke('get-download-url', {
+    body: { build_id: buildId },
+  })
+
+  if (error) {
+    // FunctionsHttpError trae el JSON { error } de la función en `context`
+    const body = await error.context?.json?.().catch(() => null)
+    const err = new Error(body?.error || error.message)
+    err.status = error.context?.status
+    throw err
+  }
+  return data
+}
+
 // ─── CONVERSIONES ─────────────────────────────────────────
 
 /**

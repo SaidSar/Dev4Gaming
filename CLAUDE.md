@@ -65,6 +65,8 @@ public/media/                # ⚠ medios de PRUEBA del hero (mp4, poster svg, .
 supabase_setup.sql           # ⚠ desactualizado: solo games/reviews (ver §4)
 supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
 supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplicada 2026-10-18)
+supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
+supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
 ```
 Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 
@@ -87,6 +89,7 @@ No hay ruta 404 (catch-all).
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
 - Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
 - Reseñas: `getReviewsByGame(gameId)`, `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Builds: `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
 - Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
 - Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
@@ -112,6 +115,12 @@ RLS (todas habilitadas):
 - downloads: RLS sin políticas (a propósito): ningún cliente lee ni escribe.
 - bug_reports: INSERT autenticado (`user_id = auth.uid()`, build publicado del mismo juego); SELECT propios o de mis juegos; UPDATE el dev dueño.
 - Helpers SECURITY DEFINER: `is_verified_dev()` (verificación approved o role admin), `owns_game(game_id)`, `build_is_published_for(build_id, game_id)`; conservan EXECUTE para anon/authenticated porque las usan las políticas. Las funciones de trigger no son invocables por RPC.
+
+Storage (buckets **privados**, nunca públicos):
+- `builds` (50 MB, apk/zip): ruta `{game_id}/{version}/{platform}/{archivo}`. INSERT/UPDATE/SELECT solo el dev verificado dueño del juego (carpeta 1 = game_id). **Jugadores sin SELECT**: descargan solo con la URL firmada de la Edge Function.
+- `bug-screenshots` (5 MB, png/jpg/webp): ruta `{game_id}/{user_id}/{archivo}`. INSERT en su propia carpeta; SELECT el autor o el dueño del juego.
+
+Edge Function `get-download-url` (POST `{build_id}` + JWT de usuario): 401 sin sesión (la anon key no basta); 404 si no está `published`; 400 si es web. Firma 300 s, inserta en `downloads` con service role y devuelve `{url, expires_in, sha256, size_bytes, version, platform}`. `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` los inyecta Supabase (sin secrets manuales). `storage_provider='external'` devuelve la URL tal cual; `r2` = TODO. Redeploy: `supabase functions deploy get-download-url`.
 
 **Operación manual (dashboard → SQL Editor):**
 ```sql
