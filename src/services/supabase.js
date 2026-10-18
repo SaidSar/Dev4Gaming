@@ -8,12 +8,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // ─── GAMES ────────────────────────────────────────────────
 
 /**
- * Obtiene todos los juegos disponibles en el catálogo.
+ * Juegos del catálogo público: solo `is_listed` (los de devs aparecen
+ * cuando tienen al menos un build publicado).
  */
 export async function getGames() {
   const { data, error } = await supabase
     .from('games')
     .select('*')
+    .eq('is_listed', true)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -102,7 +104,7 @@ export async function getReviewStats() {
  */
 export async function getHomeStats() {
   const [games, reviews] = await Promise.all([
-    supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'beta'),
+    supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'beta').eq('is_listed', true),
     supabase.from('reviews').select('id', { count: 'exact', head: true }),
   ])
 
@@ -154,16 +156,60 @@ export async function getDownloadUrl(buildId) {
 
 // ─── PANEL DEL DEV ────────────────────────────────────────
 
-/** Juegos de los que el usuario es dueño (games.owner_id) */
+/**
+ * Juegos de los que el usuario es dueño, con sus builds (RLS deja al dueño
+ * ver todos los estados) para el resumen de "Mis juegos".
+ */
 export async function getMyGames(userId) {
   const { data, error } = await supabase
     .from('games')
-    .select('id, title, cover_url, is_academic')
+    .select('id, title, genre, cover_url, is_academic, is_listed, created_at, builds(id, version, platform, status)')
     .eq('owner_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
   return data
+}
+
+/**
+ * Sube la portada al bucket público game-covers ({user_id}/{uuid}.ext).
+ * @returns {string} URL pública para games.cover_url
+ */
+export async function uploadGameCover(userId, file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage
+    .from('game-covers')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (error) throw error
+  return supabase.storage.from('game-covers').getPublicUrl(path).data.publicUrl
+}
+
+/**
+ * Crea un juego del dev verificado (RLS: owner_id = auth.uid()).
+ * Nace oculto del catálogo hasta publicar un build.
+ */
+export async function createGame(game) {
+  const { data, error } = await supabase
+    .from('games')
+    .insert([{ status: 'beta', ...game }])
+    .select('id, title')
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/** Publica/archiva todas las plataformas de una versión de una vez */
+export async function updateVersionStatus(gameId, version, status) {
+  const { error } = await supabase
+    .from('builds')
+    .update({ status })
+    .eq('game_id', gameId)
+    .eq('version', version)
+
+  if (error) throw error
 }
 
 /**

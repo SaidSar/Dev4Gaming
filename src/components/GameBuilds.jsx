@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import Icon from './Icon'
 import { trackEvent } from '../utils/track'
 import {
-  PLATFORM_LABEL, PLATFORM_ORDER, formatBytes, detectPlatform, isAllowedWebUrl,
+  PLATFORM_LABEL, PLATFORM_ORDER, DEVICE_LABEL, formatBytes, detectPlatform, recommendPlatform, isAllowedWebUrl,
 } from '../utils/builds'
 import '../styles/gameBuilds.css'
 
@@ -36,18 +36,13 @@ const INSTALL_STEPS = {
   ],
 }
 
-function pickInitialPlatform(platforms) {
-  const detected = detectPlatform()
-  if (detected && platforms.includes(detected)) return detected
-  if (platforms.includes('web')) return 'web'
-  return platforms[0]
-}
-
 function GameBuilds({ game, builds, initialBuildId, signedIn, loginHref, onDownload }) {
   const platforms = PLATFORM_ORDER.filter(p => builds.some(b => b.platform === p))
-  // Deep link ?build= manda; si no, la plataforma del visitante
+  const [device] = useState(detectPlatform)
+  const recommended = recommendPlatform(platforms, device)
+  // Deep link ?build= manda; si no, la recomendada para el dispositivo
   const linked = builds.find(b => b.id === initialBuildId)
-  const [platform, setPlatform] = useState(() => linked?.platform ?? pickInitialPlatform(platforms))
+  const [platform, setPlatform] = useState(() => linked?.platform ?? recommended)
   const versions = builds.filter(b => b.platform === platform)
   const [buildId, setBuildId] = useState(() => linked?.id ?? versions[0]?.id)
   const build = versions.find(b => b.id === buildId) ?? versions[0]
@@ -135,17 +130,24 @@ function GameBuilds({ game, builds, initialBuildId, signedIn, loginHref, onDownl
     <section className="game-detail__download card builds" aria-labelledby="gd-download-title">
       <h2 id="gd-download-title" className="game-detail__section-title">Descarga y prueba</h2>
 
-      {/* ── Plataforma y versión ── */}
+      {/* ── Plataforma: la recomendada y las demás como alternativas ── */}
+      <p className="builds__current">
+        <span className="builds__current-label">{PLATFORM_LABEL[platform]}</span>
+        {platform === recommended && device && platforms.includes(device) && (
+          <span className="builds__current-tag">Recomendada para tu dispositivo</span>
+        )}
+      </p>
+      {device && !platforms.includes(device) && (
+        <p className="builds__note builds__note--left">
+          Aún no hay versión para {DEVICE_LABEL[device]}
+          {platforms.includes('web') ? '; puedes probar la versión web.' : '.'}
+        </p>
+      )}
       {platforms.length > 1 && (
-        <div className="builds__platforms" role="group" aria-label="Plataforma">
-          {platforms.map(p => (
-            <button
-              key={p}
-              type="button"
-              className={`builds__platform ${p === platform ? 'builds__platform--active' : ''}`}
-              aria-pressed={p === platform}
-              onClick={() => selectPlatform(p)}
-            >
+        <div className="builds__alts" role="group" aria-label="Otras plataformas">
+          <span className="builds__alts-label">También disponible para:</span>
+          {platforms.filter(p => p !== platform).map(p => (
+            <button key={p} type="button" className="builds__platform" onClick={() => selectPlatform(p)}>
               {PLATFORM_LABEL[p]}
             </button>
           ))}

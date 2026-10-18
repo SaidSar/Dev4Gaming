@@ -40,7 +40,7 @@ src/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
 │   ├── roles.js             # isVerifiedDev, devEntryPath, safeRedirect, postLoginPath (destino tras login según rol)
 │   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
-│   ├── builds.js            # PLATFORM_LABEL/ORDER, formatBytes, detectPlatform, isAllowedWebUrl
+│   ├── builds.js            # PLATFORM_LABEL/ORDER, DEVICE_LABEL, formatBytes, detectPlatform (android|ios|windows|macos|linux), recommendPlatform, isAllowedWebUrl, sha256Hex, safeFileName
 │   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) y setUserRole(role) solo GA4 (no-op sin gtag)
 ├── context/
 │   ├── auth-context.js      # createContext(null)
@@ -60,14 +60,17 @@ src/
 │   ├── GameBuilds.jsx       # recuadro de descarga de la ficha: plataforma/versión, descargar o jugar (iframe), SHA-256, Qué probar, changelog, instalación; sin builds → "Build próximamente"
 │   ├── ReviewForm.jsx       # formulario + selector de estrellas + versión (build_id); candado anónimo por sesión
 │   ├── BugReportForm.jsx    # reporte de bug (requiere sesión): versión, severidad, pasos, dispositivo autodetectado, captura opcional
-│   ├── BuildUploadForm.jsx  # "Subir nueva versión": plataforma, versión, subir (≤50 MB) / enlace externo / URL web, Qué probar, changelog, requisitos, progreso
+│   ├── DevGameList.jsx      # "Mis juegos": portada, nº de versiones, plataformas, visible/oculto + tarjeta "Crear juego"
+│   ├── CreateGameForm.jsx   # título, género, descripción, créditos, proyecto académico, portada (vista previa)
+│   ├── VersionForm.jsx      # versión multiplataforma: datos comunes 1 vez + 1 fila por plataforma (apk/zip/enlace/URL web), progreso y reintento por fila
+│   ├── VersionList.jsx      # versiones agrupadas con métricas por plataforma; publicar/archivar versión completa o plataforma
 │   ├── BuildSelect.jsx      # select "Versión que probaste" compartido por reseña y bug
 │   └── ReviewList.jsx       # lista de reseñas (avatar inicial, fecha es-MX, estrellas)
 ├── pages/
 │   ├── Landing.jsx  Catalog.jsx  GameDetail.jsx
 │   ├── Login.jsx    Profile.jsx  VerifyDeveloper.jsx
 │   ├── Developers.jsx       # /desarrolladores: landing para devs (beneficios, cómo funciona, confianza); CTA según estado
-│   ├── DevDashboard.jsx     # /dev/dashboard: juegos propios, subir versión, publicar/archivar, métricas por versión
+│   ├── DevDashboard.jsx     # /dev/dashboard: Mis juegos (sin params) · Crear juego (?nuevo=1) · detalle (?juego=<id>) con nueva versión y versiones/métricas
 ├── styles/                  # global.css + 1 CSS por página/componente
 └── assets/                  # hero.png (sin usar), vite.svg
 public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shadow-forge, pixel-siege)
@@ -78,6 +81,7 @@ supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplic
 supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
 supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
 supabase_dev_metrics.sql     # RPC get_build_metrics (aplicada 2026-10-18)
+supabase_dev_games.sql       # games.is_listed + triggers, INSERT de juegos por devs, bucket público game-covers (aplicada 2026-10-18)
 seed_academic_games.sql      # PLANTILLA con TODO (no aplicada): 1–3 juegos académicos
 ```
 Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
@@ -101,9 +105,9 @@ No hay ruta 404 (catch-all).
 ## 4. Datos (Supabase)
 
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
-- Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
+- Juegos: `getGames()` (solo `is_listed`, orden `created_at desc`), `getGameById(id)` (abre aunque esté oculto: vista previa), `getHomeStats()` (conteos `head:true`: juegos beta listados + reseñas)
 - Reseñas: `getReviewsByGame(gameId)` (incluye `build:builds(version, platform)`), `postReview({game_id, build_id, user_id, user_name, rating, comment, utm_source})` (errores: code `P0429` límite anónimo por IP, `23514` build inválido), `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
-- Panel dev: `getMyGames(userId)` (games.owner_id), `getBuildMetrics(gameId)` (RPC), `createBuild(row)` (status pending_review), `updateBuildStatus(buildId, status)`; `uploadBuildFile({path, file, onProgress})` en services/buildUpload.js → `{promise, abort}` (TUS a `/storage/v1/upload/resumable`, trozos de 6 MB, reanuda subidas previas)
+- Panel dev: `getMyGames(userId)` (games.owner_id + `builds(id, version, platform, status)`), `uploadGameCover(userId, file)` → URL pública, `createGame(game)`, `getBuildMetrics(gameId)` (RPC), `createBuild(row)` (status pending_review), `updateBuildStatus(buildId, status)`, `updateVersionStatus(gameId, version, status)` (todas las plataformas); `uploadBuildFile({path, file, onProgress})` en services/buildUpload.js → `{promise, abort}` (TUS a `/storage/v1/upload/resumable`, trozos de 6 MB, reanuda subidas previas)
 - Bugs: `uploadBugScreenshot(gameId, userId, file)` → ruta en `bug-screenshots`, `submitBugReport(report)`
 - Builds: `getPublishedBuilds(gameId)` (solo `published`, recientes primero), `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
@@ -111,7 +115,7 @@ Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelv
 - Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
 
 Esquema real en la BD (public):
-- `games`: id uuid PK, title, description, genre, developer_name, image_url (placeholders, ya no se usa), status ('beta'|'released', default beta), created_at, cover_url, platform, download_size, version, is_academic (default false), credits, owner_id → auth.users (null = nadie sube builds; los 3 de ejemplo)
+- `games`: id uuid PK, title, description, genre, developer_name, image_url (placeholders, ya no se usa), status ('beta'|'released', default beta), created_at, cover_url, platform, download_size, version, is_academic (default false), credits, owner_id → auth.users (null = nadie sube builds; los 3 de ejemplo), **is_listed** (default true). Con dueño: nace oculto (trigger `games_before_insert`) y `builds_refresh_game_listing` lo lista solo si tiene ≥ 1 build publicado; sin dueño no se toca
 - `builds`: id, game_id → games (cascade), version, platform ('android'|'windows'|'linux'|'macos'|'web'), storage_provider ('supabase'|'r2'|'external'), file_path, web_entry_url (solo web; https de itch.io/github.io), size_bytes, sha256 (hex 64), changelog, test_focus, min_requirements, status ('pending_review'|'published'|'archived'), created_at. UNIQUE(game_id, version, platform). En Supabase solo .apk/.zip ≤ 50 MB (plan Free)
 - `downloads`: id bigserial, build_id → builds, user_id, created_at. **Solo la escribe la Edge Function** (service role)
 - `bug_reports`: id, game_id, build_id (null = versión no especificada), user_id (default auth.uid()), description, steps_to_reproduce, severity ('low'|'medium'|'high'|'crash'), device_info jsonb, screenshot_path, status ('open'|'resolved'), created_at
@@ -122,7 +126,7 @@ Esquema real en la BD (public):
 - `developer_verifications`: user_id PK → auth.users, type ('independent'|'company'), legal_name, website, portfolio_url, tax_id, status ('pending'|'approved'|'rejected'), created_at
 
 RLS (todas habilitadas):
-- games: SELECT público. Sin políticas de escritura (los juegos se cargan a mano en el dashboard).
+- games: SELECT público (el catálogo filtra `is_listed`). INSERT para dev verificado con `owner_id = auth.uid()`. Sin UPDATE/DELETE para clientes (editar/borrar desde el dashboard).
 - reviews: SELECT público; INSERT si `user_id IS NULL OR user_id = auth.uid()`.
 - profiles: SELECT solo el propio.
 - developer_verifications: SELECT/INSERT propio (status='pending'); UPDATE propio si no está `approved` y deja `pending`. La aprobación es manual (dashboard).
@@ -134,6 +138,7 @@ RLS (todas habilitadas):
 
 Storage (buckets **privados**, nunca públicos):
 - `builds` (50 MB, apk/zip): ruta `{game_id}/{version}/{platform}/{archivo}`. INSERT/UPDATE/SELECT solo el dev verificado dueño del juego (carpeta 1 = game_id). **Jugadores sin SELECT**: descargan solo con la URL firmada de la Edge Function.
+- `game-covers` (**público**, 5 MB, png/jpg/webp): portadas visibles en el catálogo. Ruta `{user_id}/{archivo}`; INSERT solo dev verificado en su carpeta.
 - `bug-screenshots` (5 MB, png/jpg/webp): ruta `{game_id}/{user_id}/{archivo}`. INSERT en su propia carpeta; SELECT el autor o el dueño del juego.
 
 Edge Function `get-download-url` (POST `{build_id}` + JWT de usuario): 401 sin sesión (la anon key no basta); 404 si no está `published`; 400 si es web. Firma 300 s, inserta en `downloads` con service role y devuelve `{url, expires_in, sha256, size_bytes, version, platform}`. `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` los inyecta Supabase (sin secrets manuales). `storage_provider='external'` devuelve la URL tal cual; `r2` = TODO. Redeploy: `supabase functions deploy get-download-url`.
@@ -160,7 +165,7 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Catálogo** (`Catalog.jsx`): `Promise.all([getGames(), getReviewStats().catch(() => ({}))])` al montar → géneros derivados con `new Set(...)` + "Todos" → filtro 100% en cliente (`activeGenre`). Estados: skeletons (6), error con "Reintentar", vacío, contador. Sin reseñas: "Sin reseñas aún, sé el primero". "▶ Jugar" → `trackConversion('play_click')` + navigate a `/juego/:id`.
 
-**Detalle** (`GameDetail.jsx`): `Promise.all([getGameById, getReviewsByGame, getPublishedBuilds().catch(() => [])])`; promedio y distribución 5★→1★ en cliente; reseña nueva se antepone sin re-fetch. Badge "Proyecto académico" (`.badge-academic`, global.css) y créditos si `is_academic`/`credits`. `GameBuilds` (key=id): preselecciona la plataforma del visitante; web → botón "Jugar en el navegador" que monta el iframe (`sandbox="allow-scripts allow-same-origin allow-pointer-lock"`, `allow="fullscreen; gamepad"`, solo si `isAllowedWebUrl`); descargable sin sesión → link a `/login?redirect=`; con sesión → `getDownloadUrl` + `trackConversion('download_click')` + `location.assign(url)`. Cada reseña muestra "Versión X", "Versión no especificada" (build_id null) o "Versión retirada" (build ya no visible).
+**Detalle** (`GameDetail.jsx`): `Promise.all([getGameById, getReviewsByGame, getPublishedBuilds().catch(() => [])])`; promedio y distribución 5★→1★ en cliente; reseña nueva se antepone sin re-fetch. Badge "Proyecto académico" (`.badge-academic`, global.css) y créditos si `is_academic`/`credits`. `GameBuilds` (key=id): `recommendPlatform` (dispositivo → su build; iPhone o sin build → web; si no, la primera) con etiqueta "Recomendada para tu dispositivo", aviso "Aún no hay versión para X" y "También disponible para…" con las demás; web → botón "Jugar en el navegador" que monta el iframe (`sandbox="allow-scripts allow-same-origin allow-pointer-lock"`, `allow="fullscreen; gamepad"`, solo si `isAllowedWebUrl`); descargable sin sesión → link a `/login?redirect=`; con sesión → `getDownloadUrl` + `trackConversion('download_click')` + `location.assign(url)`. Cada reseña muestra "Versión X", "Versión no especificada" (build_id null) o "Versión retirada" (build ya no visible).
 
 **Campaña / UTM**: `App` llama `captureUtm()` como inicializador de `useState` (una vez). Guarda utm_source/medium/campaign/content en sessionStorage `d4g_utm`; sin UTM ni nada guardado → `{utm_source:'direct'}`; nunca pisa un UTM con 'direct'. `CampaignBanner` recibe `utm.utm_source`; al cerrarlo se guarda `d4g_banner_closed`.
 
@@ -174,7 +179,7 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 - Estrellas: 5 `<button>` con hover (`hovered || rating`), `aria-label`, `aria-pressed`; sin estrellas → "Elige de 1 a 5 estrellas para publicar."; comentario requerido (máx 500, contador).
 - Éxito: confirmación persistente + callback `onReviewPosted`; sin sesión, botón "Crear cuenta para guardar mis reseñas" → `/login?mode=register`.
 
-**Panel del dev** (`DevDashboard`): flujo de subida = SHA-256 en el navegador (`sha256Hex`, Web Crypto) → subida TUS a `{game_id}/{version}/{platform}/{archivo}` → `createBuild` en `pending_review` → el dev publica/archiva. Validación cliente: android `.apk`, windows/macos/linux `.zip`, ≤ 50 MB; si pesa más, error que sugiere "Enlace externo" (`storage_provider='external'`, URL https; el archivo local opcional solo sirve para calcular tamaño/SHA). Web: URL https de itch.io/github.io. Métricas (`get_build_metrics`, SECURITY DEFINER, solo dueño/admin): descargas y usuarios únicos, reseñas y promedio, bugs por severidad y conversión descarga→reseña (solo reseñas con cuenta). Sin juegos asignados → estado vacío (owner_id se asigna a mano, ver §4).
+**Panel del dev** (`DevDashboard`): vistas por URL (`?nuevo=1`, `?juego=<id>`). Crear juego = portada a `game-covers` → `createGame` (oculto). Nueva versión: versión/changelog/Qué probar/requisitos una vez + filas por plataforma; cada fila, en orden: SHA-256 en el navegador (`sha256Hex`) → subida TUS a `{game_id}/{version}/{platform}/{archivo}` (un 409 en reintento = ya subido) → `createBuild` en `pending_review`. Si una falla, las demás quedan guardadas y la versión se bloquea para reintentar esa fila. Publicar/archivar por versión (`updateVersionStatus`) o por plataforma; publicar lista el juego. Validación cliente: android `.apk`, windows/macos/linux `.zip`, ≤ 50 MB; si pesa más, error que sugiere "Enlace externo" (`storage_provider='external'`, URL https; el archivo local opcional solo sirve para calcular tamaño/SHA). Web: URL https de itch.io/github.io. Métricas (`get_build_metrics`, SECURITY DEFINER, solo dueño/admin): descargas y usuarios únicos, reseñas y promedio, bugs por severidad y conversión descarga→reseña (solo reseñas con cuenta). Sin juegos asignados → estado vacío (owner_id se asigna a mano, ver §4).
 
 **Bugs** (`BugReportForm`, columna izquierda de la ficha): se despliega con "Reportar"; sin sesión pide login con redirect. Severidad low/medium/high/crash (Baja/Media/Alta/Crash), descripción (requerida), pasos, `device_info` (userAgentData si existe), captura PNG/JPG/WebP ≤ 5 MB.
 
@@ -197,7 +202,8 @@ User property **`user_role`** (`setUserRole`, desde `AuthContext` al terminar de
 | `review_submit` | ReviewForm (reseña publicada) | `game_id, build_id, version, rating, anonymous` |
 | `bug_report_submit` | BugReportForm | `game_id, build_id, severity, has_steps, has_screenshot` |
 | `dev_verification_request` | VerifyDeveloper | `type, resubmission` |
-| `build_upload` | DevDashboard (versión guardada) | `game_id, build_id, version, platform, storage_provider, size_bytes` |
+| `game_create` | DevDashboard (juego creado) | `game_id, is_academic` |
+| `build_upload` | DevDashboard (cada plataforma guardada) | `game_id, build_id, version, platform, storage_provider, size_bytes` |
 | `hero_video_play` / `hero_video_unmute` / `hero_video_complete` / `hero_cta_click` | HeroInfluencer | ver **Hero** |
 | `signup_modal_view` / `signup_modal_cta` / `signup_modal_dismiss` | useSignupInvite | ver **Invitación** |
 | `play_click`, `download_click`, `submit_review` | `trackConversion` (embudo propio; también llegan a GA4) | `game_id` (+ `rating`). En GA4 usar `review_submit`, no `submit_review`, para no contar doble |
@@ -264,7 +270,7 @@ Completo: landing, catálogo con filtro por género, detalle, reseñas anónimas
 
 Pendiente / deuda:
 - Activar GA4 (ver **Analítica (GA4)**: script + `VITE_GA_ID`); eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
-- Publicación de juegos por desarrolladores verificados (no hay tabla/política de escritura ni UI).
+- Editar o borrar juegos desde el panel (hoy solo crear; no hay UPDATE/DELETE para devs).
 - Panel admin para aprobar verificaciones y moderar reseñas.
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
 - Búsqueda por texto / orden en catálogo; paginación.

@@ -24,18 +24,30 @@ export function formatBytes(bytes) {
   return `${new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 }).format(value)} ${units[i]}`
 }
 
-/** Plataforma del visitante, para preseleccionar su build */
+/** Dispositivo del visitante: 'android' | 'ios' | 'windows' | 'macos' | 'linux' | null */
 export function detectPlatform() {
   if (typeof navigator === 'undefined') return null
   const ua = navigator.userAgent || ''
   if (/Android/i.test(ua)) return 'android'
-  if (/iPhone|iPad|iPod/i.test(ua)) return 'web'
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
   const platform = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase()
   if (platform.includes('win')) return 'windows'
   if (platform.includes('mac')) return 'macos'
   if (platform.includes('linux')) return 'linux'
   return null
 }
+
+/**
+ * Plataforma recomendada entre las disponibles: la del dispositivo; si no
+ * hay build para él (o es iPhone), la web; si tampoco, la primera.
+ */
+export function recommendPlatform(platforms, device = detectPlatform()) {
+  if (device && platforms.includes(device)) return device
+  if (platforms.includes('web')) return 'web'
+  return platforms[0]
+}
+
+export const DEVICE_LABEL = { ...PLATFORM_LABEL, ios: 'iPhone / iPad' }
 
 /**
  * Builds web: solo https de itch.io o GitHub Pages (misma regla que el
