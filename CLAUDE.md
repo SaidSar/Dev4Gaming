@@ -37,6 +37,7 @@ src/
 ├── services/supabase.js     # ÚNICO punto de acceso a Supabase (cliente + todas las queries/mutaciones)
 ├── utils/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
+│   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
 │   ├── builds.js            # PLATFORM_LABEL/ORDER, formatBytes, detectPlatform, isAllowedWebUrl
 │   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) solo GA4 (no-op sin gtag)
 ├── context/
@@ -55,7 +56,9 @@ src/
 │   ├── StarRating.jsx       # estrellas de solo lectura (promedio)
 │   ├── GameCard.jsx         # tarjeta del catálogo: portada, DEMO GRATIS, ★ promedio, botón "▶ Jugar"
 │   ├── GameBuilds.jsx       # recuadro de descarga de la ficha: plataforma/versión, descargar o jugar (iframe), SHA-256, Qué probar, changelog, instalación; sin builds → "Build próximamente"
-│   ├── ReviewForm.jsx       # formulario + selector de estrellas
+│   ├── ReviewForm.jsx       # formulario + selector de estrellas + versión (build_id); candado anónimo por sesión
+│   ├── BugReportForm.jsx    # reporte de bug (requiere sesión): versión, severidad, pasos, dispositivo autodetectado, captura opcional
+│   ├── BuildSelect.jsx      # select "Versión que probaste" compartido por reseña y bug
 │   └── ReviewList.jsx       # lista de reseñas (avatar inicial, fecha es-MX, estrellas)
 ├── pages/
 │   ├── Landing.jsx  Catalog.jsx  GameDetail.jsx
@@ -91,7 +94,8 @@ No hay ruta 404 (catch-all).
 
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
 - Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
-- Reseñas: `getReviewsByGame(gameId)` (incluye `build:builds(version, platform)`), `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Reseñas: `getReviewsByGame(gameId)` (incluye `build:builds(version, platform)`), `postReview({game_id, build_id, user_id, user_name, rating, comment, utm_source})` (errores: code `P0429` límite anónimo por IP, `23514` build inválido), `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Bugs: `uploadBugScreenshot(gameId, userId, file)` → ruta en `bug-screenshots`, `submitBugReport(report)`
 - Builds: `getPublishedBuilds(gameId)` (solo `published`, recientes primero), `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
 - Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
@@ -154,10 +158,16 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 **Conversiones** (`utils/track.js`): `trackConversion(event, extra)` inserta en `conversion_events` con UTM + user_id de sesión y llama `window.gtag` si existe; nunca lanza (try/catch + console.warn). Puntos: `play_click` (Catalog), `download_click` (GameDetail), `submit_review` (ReviewForm; además guarda `utm_source` en la reseña), `sign_up` (Login tras `signUp`; cuenta el envío aunque falte confirmar el correo).
 
 **Reseñas** (`ReviewForm.jsx`):
+- Versión: `BuildSelect` controlado por GameDetail (`feedbackBuildId`, compartido con el bug). Default: `?build=` → última descarga sin calificar → build más reciente; `''` = no especificada.
+- Anónimas: 1 por juego por sesión del navegador (sessionStorage `d4g_anon_reviews`) + 5 por juego/IP/24 h en la base.
 - Autenticado: "Publicarás como {displayName}", envía `user_id = user.id`, `user_name = displayName`.
 - Anónimo: nombre opcional (máx 50); vacío → `Anonimo####` aleatorio; `user_id = null`.
 - Estrellas: 5 `<button>` con hover (`hovered || rating`), `aria-label`, `aria-pressed`; sin estrellas → "Elige de 1 a 5 estrellas para publicar."; comentario requerido (máx 500, contador).
 - Éxito: confirmación persistente + callback `onReviewPosted`; sin sesión, botón "Crear cuenta para guardar mis reseñas" → `/login?mode=register`.
+
+**Bugs** (`BugReportForm`, columna izquierda de la ficha): se despliega con "Reportar"; sin sesión pide login con redirect. Severidad low/medium/high/crash (Baja/Media/Alta/Crash), descripción (requerida), pasos, `device_info` (userAgentData si existe), captura PNG/JPG/WebP ≤ 5 MB.
+
+**Aviso para calificar**: tras una descarga exitosa se guarda en localStorage `d4g_downloads` y se muestra "¿Ya probaste la vX?" (también al volver otro día). "Calificar ahora" → `?build=<id>`, baja a `#resena` y enfoca la 1.ª estrella; "Ahora no" o reseñar ese build lo marca en `d4g_rated_builds`.
 
 **Hero** (`HeroInfluencer`): autoplay muted salvo `prefers-reduced-motion`; subtítulos del `<track>` pintados a mano (mode hidden + cuechange); si el video falla muestra el poster. Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
 

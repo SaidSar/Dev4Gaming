@@ -53,11 +53,16 @@ export async function getReviewsByGame(gameId) {
   return data
 }
 
-export async function postReview({ game_id, user_id = null, user_name, rating, comment, utm_source = null }) {
+/**
+ * Publica una reseña. build_id es opcional (null = versión no especificada).
+ * Errores de la base: code 'P0429' = límite de reseñas anónimas por IP;
+ * code '23514' = la versión no es de este juego o no está publicada.
+ */
+export async function postReview({ game_id, build_id = null, user_id = null, user_name, rating, comment, utm_source = null }) {
   const { data, error } = await supabase
     .from('reviews')
-    .insert([{ game_id, user_id, user_name, rating, comment, utm_source }])
-    .select()
+    .insert([{ game_id, build_id, user_id, user_name, rating, comment, utm_source }])
+    .select('*, build:builds(version, platform)')
     .single()
 
   if (error) throw error
@@ -144,6 +149,40 @@ export async function getDownloadUrl(buildId) {
     err.status = error.context?.status
     throw err
   }
+  return data
+}
+
+// ─── REPORTES DE BUGS ─────────────────────────────────────
+
+/**
+ * Sube una captura al bucket privado bug-screenshots.
+ * Ruta: {game_id}/{user_id}/{uuid}.{ext} (la política exige su user_id).
+ * @returns {string} ruta del archivo en el bucket
+ */
+export async function uploadBugScreenshot(gameId, userId, file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  const path = `${gameId}/${userId}/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage
+    .from('bug-screenshots')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (error) throw error
+  return path
+}
+
+/**
+ * Registra un bug (requiere sesión; user_id lo pone la base con auth.uid()).
+ * @param {{game_id, build_id?, description, steps_to_reproduce?, severity,
+ *          device_info?, screenshot_path?}} report
+ */
+export async function submitBugReport(report) {
+  const { data, error } = await supabase
+    .from('bug_reports')
+    .insert([report])
+    .select('id')
+    .single()
+
+  if (error) throw error
   return data
 }
 

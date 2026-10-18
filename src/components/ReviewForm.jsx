@@ -4,13 +4,24 @@ import { postReview } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { getUtm } from '../utils/utm'
 import { trackConversion } from '../utils/track'
+import { hasAnonReview, lockAnonReview, markRated } from '../utils/feedback'
+import BuildSelect from './BuildSelect'
 import '../styles/reviewForm.css'
 
 function randomAnonName() {
   return `Anonimo${Math.floor(1000 + Math.random() * 9000)}`
 }
 
-function ReviewForm({ gameId, onReviewPosted }) {
+// Mensajes para los errores que devuelve la base (trigger reviews_before_insert)
+function reviewError(err) {
+  if (err?.code === 'P0429') return 'Alcanzaste el límite de reseñas anónimas de hoy. Inicia sesión para seguir opinando.'
+  if (err?.code === '23514') return 'Esa versión ya no está disponible. Elige otra o "No lo sé".'
+  return 'No se pudo enviar la reseña. Intenta de nuevo.'
+}
+
+// buildId lo controla la página (lo comparte con el reporte de bugs y el
+// aviso "¿Ya lo probaste?"); '' = versión no especificada.
+function ReviewForm({ gameId, builds = [], buildId = '', onBuildChange, loginHref, onReviewPosted }) {
   const { user, displayName } = useAuth()
   const [userName, setUserName] = useState('')
   const [rating, setRating]     = useState(0)
@@ -19,6 +30,8 @@ function ReviewForm({ gameId, onReviewPosted }) {
   const [loading, setLoading]   = useState(false)
   const [success, setSuccess]   = useState(false)
   const [error, setError]       = useState(null)
+  // 1 reseña anónima por juego y sesión del navegador (además del límite por IP)
+  const [anonLocked, setAnonLocked] = useState(() => hasAnonReview(gameId))
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -39,6 +52,7 @@ function ReviewForm({ gameId, onReviewPosted }) {
     try {
       const review = await postReview({
         game_id:    gameId,
+        build_id:   buildId || null,
         user_id:    user?.id ?? null,
         user_name:  user ? displayName : (userName.trim() || randomAnonName()),
         rating,
@@ -49,30 +63,43 @@ function ReviewForm({ gameId, onReviewPosted }) {
       setUserName('')
       setRating(0)
       setComment('')
+      markRated(buildId)
+      if (!user) {
+        lockAnonReview(gameId)
+        setAnonLocked(true)
+      }
       onReviewPosted?.(review)
       trackConversion('submit_review', { game_id: gameId, rating: review.rating })
-    } catch {
-      setError('No se pudo enviar la reseña. Intenta de nuevo.')
+    } catch (err) {
+      setError(reviewError(err))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="review-form card" data-no-signup-invite>
+    <div className="review-form card" id="resena" data-no-signup-invite>
       <h3 className="review-form__title">Deja tu reseña</h3>
 
       {success && (
         <div className="review-form__success" role="status">
           <p>✓ ¡Reseña publicada! Gracias por tu feedback.</p>
           {!user && (
-            <Link to="/login?mode=register" className="btn btn-secondary review-form__signup">
+            <Link to={`${loginHref}&mode=register`} className="btn btn-secondary review-form__signup">
               Crear cuenta para guardar mis reseñas
             </Link>
           )}
         </div>
       )}
 
+      {!user && anonLocked && !success ? (
+        <div className="review-form__locked">
+          <p>Ya dejaste una reseña anónima de este juego en esta sesión.</p>
+          <Link to={`${loginHref}&mode=register`} className="btn btn-secondary review-form__signup">
+            Crea tu cuenta para opinar de nuevo
+          </Link>
+        </div>
+      ) : !user && anonLocked ? null : (
       <form onSubmit={handleSubmit} className="review-form__body" noValidate>
 
         {user ? (
@@ -92,6 +119,8 @@ function ReviewForm({ gameId, onReviewPosted }) {
             />
           </div>
         )}
+
+        <BuildSelect id="rf-build" builds={builds} value={buildId} onChange={onBuildChange} />
 
         <div className="review-form__field">
           <label>Calificación</label>
@@ -117,11 +146,11 @@ function ReviewForm({ gameId, onReviewPosted }) {
         </div>
 
         <div className="review-form__field">
-          <label htmlFor="rf-comment">Comentario o reporte de bug</label>
+          <label htmlFor="rf-comment">Comentario</label>
           <textarea
             id="rf-comment"
             rows={4}
-            placeholder="¿Qué te pareció el juego? ¿Encontraste algún bug?"
+            placeholder="¿Qué te pareció? Para fallos usa «Reportar un bug»."
             value={comment}
             onChange={e => setComment(e.target.value)}
             maxLength={500}
@@ -140,6 +169,7 @@ function ReviewForm({ gameId, onReviewPosted }) {
         </button>
 
       </form>
+      )}
     </div>
   )
 }

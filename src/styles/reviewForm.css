@@ -4,6 +4,7 @@
 .review-form {
   padding: 1.5rem;
   margin-bottom: 2rem;
+  scroll-margin-top: 88px; /* deep link #resena: no quedar bajo el navbar fijo */
 }
 
 .review-form__title {
@@ -25,6 +26,16 @@
   color: inherit;
   max-width: none;
 }
+
+.review-form__locked {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+  background-color: var(--bg-elevated);
+  font-size: 0.875rem;
+}
+
+.review-form__locked p { max-width: none; }
 
 .review-form__signup {
   margin-top: 0.75rem;

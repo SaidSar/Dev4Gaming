@@ -1,0 +1,113 @@
+/* ══════════════════════════════════════════════
+   BUG REPORT FORM (reutiliza campos de reviewForm.css)
+══════════════════════════════════════════════ */
+
+.bug-report {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* No es una tarjeta clicable */
+.bug-report:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.bug-report__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bug-report__title { margin-bottom: 0; }
+
+.bug-report__intro {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.875rem;
+  max-width: none;
+}
+
+/* ── Severidad ── */
+.bug-report__severity {
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.bug-report__severity legend {
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.bug-report__sev {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem 0.6rem 2.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+  background-color: var(--bg-elevated);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.bug-report__sev input {
+  position: absolute;
+  left: 0.7rem;
+  top: 0.8rem;
+  width: auto;
+  accent-color: var(--blue);
+}
+
+.bug-report__sev:has(input:checked) { border-color: var(--blue); }
+.bug-report__sev:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.bug-report__sev-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bug-report__sev--high .bug-report__sev-label  { color: #f59e0b; }
+.bug-report__sev--crash .bug-report__sev-label { color: #ff6b6b; }
+
+.bug-report__sev-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ── Dispositivo ── */
+.bug-report__device-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.bug-report__device {
+  max-width: none;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.bug-report input[type="file"] {
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.bug-report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .bug-report__severity { grid-template-columns: minmax(0, 1fr); }
+  .bug-report__actions .btn { flex: 1; }
+}

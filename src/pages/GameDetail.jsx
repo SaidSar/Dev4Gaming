@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useParams, useLocation, Link } from 'react-router-dom'
+import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { getGameById, getReviewsByGame, getPublishedBuilds, getDownloadUrl } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { trackConversion } from '../utils/track'
+import { rememberDownload, getPendingRating, markRated } from '../utils/feedback'
 import GameCover from '../components/GameCover'
 import Icon from '../components/Icon'
 import StarRating from '../components/StarRating'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
 import GameBuilds from '../components/GameBuilds'
+import BugReportForm from '../components/BugReportForm'
 import '../styles/gameDetail.css'
 
 function GameDetail() {
@@ -19,7 +21,13 @@ function GameDetail() {
   const [error, setError]     = useState(null)
   const [builds, setBuilds]   = useState([])
   const { user } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
+  const [params, setParams] = useSearchParams()
+  // Versión elegida en reseña y bug ('' = no especificada)
+  const [feedbackBuildId, setFeedbackBuildId] = useState('')
+  // Aviso "¿Ya lo probaste?" tras descargar (persiste entre visitas)
+  const [ratePrompt, setRatePrompt] = useState(null)
+  const deepLinkBuild = params.get('build')
 
   useEffect(() => {
     async function fetchData() {
@@ -33,6 +41,15 @@ function GameDetail() {
         setGame(gameData)
         setReviews(reviewsData)
         setBuilds(buildsData)
+
+        // Versión por defecto: deep link ?build= → última descarga → la más reciente
+        const ids = buildsData.map(b => b.id)
+        const pending = getPendingRating(id)
+        const linked = new URLSearchParams(window.location.search).get('build')
+        setFeedbackBuildId(
+          [linked, pending?.build_id, ids[0]].find(b => b && ids.includes(b)) ?? ''
+        )
+        if (pending && ids.includes(pending.build_id)) setRatePrompt(pending)
       } catch {
         setError('No se encontró el juego.')
       } finally {
@@ -45,14 +62,38 @@ function GameDetail() {
   // Añade la reseña nueva al inicio sin re-fetch
   function handleReviewPosted(newReview) {
     setReviews(prev => [newReview, ...prev])
+    if (ratePrompt && newReview.build_id === ratePrompt.build_id) setRatePrompt(null)
   }
+
+  // Deep link ?build=…#resena: al cargar, baja al formulario de reseña
+  useEffect(() => {
+    if (!loading && hash === '#resena') {
+      document.getElementById('resena')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [loading, hash])
 
   // La Edge Function valida sesión y build, registra la descarga y firma la URL
   async function handleDownload(build) {
     const result = await getDownloadUrl(build.id)
     trackConversion('download_click', { game_id: id })
+    rememberDownload(id, build)
+    setFeedbackBuildId(build.id)
+    setRatePrompt({ build_id: build.id, version: build.version, platform: build.platform })
     window.location.assign(result.url)
     return result
+  }
+
+  function goRate() {
+    setFeedbackBuildId(ratePrompt.build_id)
+    setParams({ build: ratePrompt.build_id }, { replace: true })
+    const form = document.getElementById('resena')
+    form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    form?.querySelector('.review-form__star')?.focus({ preventScroll: true })
+  }
+
+  function dismissRatePrompt() {
+    markRated(ratePrompt.build_id)
+    setRatePrompt(null)
   }
 
   // Promedio y distribución derivados del estado
@@ -148,12 +189,30 @@ function GameDetail() {
             {/* ── Descarga / juego en el navegador ── */}
             <GameBuilds
               key={id}
+              initialBuildId={deepLinkBuild}
               game={game}
               builds={builds}
               signedIn={Boolean(user)}
               loginHref={`/login?redirect=${encodeURIComponent(pathname)}`}
               onDownload={handleDownload}
             />
+
+            {ratePrompt && (
+              <div className="game-detail__rate-prompt" role="status">
+                <p>
+                  <strong>¿Ya probaste la v{ratePrompt.version}?</strong>{' '}
+                  Califícala: tu opinión llega directo al equipo.
+                </p>
+                <div className="game-detail__rate-actions">
+                  <button type="button" className="btn btn-purple" onClick={goRate}>
+                    Calificar ahora
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={dismissRatePrompt}>
+                    Ahora no
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Distribución de calificaciones ── */}
             <section className="game-detail__dist" aria-labelledby="gd-dist-title">
@@ -177,6 +236,14 @@ function GameDetail() {
                 })}
               </ul>
             </section>
+
+            <BugReportForm
+              gameId={id}
+              builds={builds}
+              buildId={feedbackBuildId}
+              onBuildChange={setFeedbackBuildId}
+              loginHref={`/login?redirect=${encodeURIComponent(pathname)}`}
+            />
           </div>
 
           {/* ── Columna derecha: reseñas ── */}
@@ -188,7 +255,14 @@ function GameDetail() {
               )}
             </h2>
 
-            <ReviewForm gameId={id} onReviewPosted={handleReviewPosted} />
+            <ReviewForm
+              gameId={id}
+              builds={builds}
+              buildId={feedbackBuildId}
+              onBuildChange={setFeedbackBuildId}
+              loginHref={`/login?redirect=${encodeURIComponent(pathname)}`}
+              onReviewPosted={handleReviewPosted}
+            />
             <ReviewList reviews={reviews} />
           </section>
 

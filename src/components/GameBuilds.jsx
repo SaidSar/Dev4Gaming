@@ -42,11 +42,13 @@ function pickInitialPlatform(platforms) {
   return platforms[0]
 }
 
-function GameBuilds({ game, builds, signedIn, loginHref, onDownload }) {
+function GameBuilds({ game, builds, initialBuildId, signedIn, loginHref, onDownload }) {
   const platforms = PLATFORM_ORDER.filter(p => builds.some(b => b.platform === p))
-  const [platform, setPlatform] = useState(() => pickInitialPlatform(platforms))
+  // Deep link ?build= manda; si no, la plataforma del visitante
+  const linked = builds.find(b => b.id === initialBuildId)
+  const [platform, setPlatform] = useState(() => linked?.platform ?? pickInitialPlatform(platforms))
   const versions = builds.filter(b => b.platform === platform)
-  const [buildId, setBuildId] = useState(versions[0]?.id)
+  const [buildId, setBuildId] = useState(() => linked?.id ?? versions[0]?.id)
   const build = versions.find(b => b.id === buildId) ?? versions[0]
 
   const [busy, setBusy] = useState(false)
