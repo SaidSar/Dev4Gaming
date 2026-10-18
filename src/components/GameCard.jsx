@@ -5,7 +5,7 @@ import StarRating from './StarRating'
 import '../styles/gameCard.css'
 
 function GameCard({ game, stats, onPlay }) {
-  const { title, genre, developer_name, cover_url, status } = game
+  const { title, genre, developer_name, cover_url, status, is_academic, credits } = game
 
   return (
     <article className="game-card card">
@@ -20,11 +20,15 @@ function GameCard({ game, stats, onPlay }) {
       </GameCover>
 
       <div className="game-card__body">
+        {is_academic && <span className="badge-academic game-card__academic">PROYECTO ACADÉMICO</span>}
         <h3 className="game-card__title">{title}</h3>
         <p className="game-card__dev">
           {genre && <span className="game-card__genre">{genre}</span>}
           {developer_name && <span>por {developer_name}</span>}
         </p>
+        {is_academic && credits && (
+          <p className="game-card__credits">Créditos: {credits}</p>
+        )}
 
         <div className="game-card__rating">
           {stats?.count ? (

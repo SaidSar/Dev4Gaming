@@ -179,6 +179,14 @@
   max-width: none;
 }
 
+.review-item__version {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
 
 .review-form__as {
   font-size: 0.88rem;

@@ -42,9 +42,10 @@ export async function getGameById(id) {
  * @param {string} gameId - UUID del juego
  */
 export async function getReviewsByGame(gameId) {
+  // build: versión ligada (null si no hay build_id o el build ya no es visible)
   const { data, error } = await supabase
     .from('reviews')
-    .select('*')
+    .select('*, build:builds(version, platform)')
     .eq('game_id', gameId)
     .order('created_at', { ascending: false })
 
@@ -106,6 +107,23 @@ export async function getHomeStats() {
 }
 
 // ─── BUILDS Y DESCARGAS ───────────────────────────────────
+
+/**
+ * Builds publicados de un juego, del más reciente al más antiguo.
+ * RLS solo deja ver `published` (o los propios del dev dueño).
+ * @param {string} gameId - UUID del juego
+ */
+export async function getPublishedBuilds(gameId) {
+  const { data, error } = await supabase
+    .from('builds')
+    .select('id, version, platform, storage_provider, web_entry_url, size_bytes, sha256, changelog, test_focus, min_requirements, created_at')
+    .eq('game_id', gameId)
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
 
 /**
  * Pide a la Edge Function `get-download-url` un enlace firmado (300 s).

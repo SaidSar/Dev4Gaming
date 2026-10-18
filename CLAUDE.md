@@ -37,6 +37,7 @@ src/
 ├── services/supabase.js     # ÚNICO punto de acceso a Supabase (cliente + todas las queries/mutaciones)
 ├── utils/
 │   ├── utm.js               # captureUtm() / getUtm() — UTM de la sesión en sessionStorage 'd4g_utm'
+│   ├── builds.js            # PLATFORM_LABEL/ORDER, formatBytes, detectPlatform, isAllowedWebUrl
 │   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) solo GA4 (no-op sin gtag)
 ├── context/
 │   ├── auth-context.js      # createContext(null)
@@ -53,6 +54,7 @@ src/
 │   ├── GameCover.jsx        # portada 16:10 desde cover_url; respaldo degradado + título si falta/falla
 │   ├── StarRating.jsx       # estrellas de solo lectura (promedio)
 │   ├── GameCard.jsx         # tarjeta del catálogo: portada, DEMO GRATIS, ★ promedio, botón "▶ Jugar"
+│   ├── GameBuilds.jsx       # recuadro de descarga de la ficha: plataforma/versión, descargar o jugar (iframe), SHA-256, Qué probar, changelog, instalación; sin builds → "Build próximamente"
 │   ├── ReviewForm.jsx       # formulario + selector de estrellas
 │   └── ReviewList.jsx       # lista de reseñas (avatar inicial, fecha es-MX, estrellas)
 ├── pages/
@@ -67,6 +69,7 @@ supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
 supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplicada 2026-10-18)
 supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
 supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
+seed_academic_games.sql      # PLANTILLA con TODO (no aplicada): 1–3 juegos académicos
 ```
 Hooks custom: `context/useAuth.js` y `hooks/useSignupInvite.js`.
 
@@ -88,8 +91,8 @@ No hay ruta 404 (catch-all).
 
 Funciones en `services/supabase.js` (todas lanzan `error` si Supabase lo devuelve):
 - Juegos: `getGames()` (orden `created_at desc`), `getGameById(id)`, `getHomeStats()` (conteos `head:true`: juegos beta + reseñas)
-- Reseñas: `getReviewsByGame(gameId)`, `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
-- Builds: `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
+- Reseñas: `getReviewsByGame(gameId)` (incluye `build:builds(version, platform)`), `postReview({game_id, user_id, user_name, rating, comment, utm_source})`, `getReviewStats()` (1 consulta, agregado en cliente → `{[game_id]: {avg, count}}`), `getAverageRating(gameId)` (no se usa)
+- Builds: `getPublishedBuilds(gameId)` (solo `published`, recientes primero), `getDownloadUrl(buildId)` → `supabase.functions.invoke('get-download-url')`; lanza `Error` con el mensaje de la función y `err.status`
 - Conversiones: `insertConversionEvent(row)` (sin `.select()`: no hay SELECT público), `getCurrentUserId()`
 - Auth: `signUp({email,password,displayName,utmSource})` (guarda `display_name` y `utm_source` en metadata), `signIn`, `signOut`
 - Perfil/dev: `getProfile(userId)`, `getMyVerification(userId)`, `submitVerification(userId, fields)` (upsert `onConflict: user_id`, status `pending`)
@@ -144,7 +147,7 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Catálogo** (`Catalog.jsx`): `Promise.all([getGames(), getReviewStats().catch(() => ({}))])` al montar → géneros derivados con `new Set(...)` + "Todos" → filtro 100% en cliente (`activeGenre`). Estados: skeletons (6), error con "Reintentar", vacío, contador. Sin reseñas: "Sin reseñas aún, sé el primero". "▶ Jugar" → `trackConversion('play_click')` + navigate a `/juego/:id`.
 
-**Detalle** (`GameDetail.jsx`): `Promise.all([getGameById, getReviewsByGame])`; promedio y distribución 5★→1★ en cliente; reseña nueva se antepone sin re-fetch. "⬇ Descargar juego" no descarga: muestra "La descarga estará disponible pronto." + `trackConversion('download_click')`.
+**Detalle** (`GameDetail.jsx`): `Promise.all([getGameById, getReviewsByGame, getPublishedBuilds().catch(() => [])])`; promedio y distribución 5★→1★ en cliente; reseña nueva se antepone sin re-fetch. Badge "Proyecto académico" (`.badge-academic`, global.css) y créditos si `is_academic`/`credits`. `GameBuilds` (key=id): preselecciona la plataforma del visitante; web → botón "Jugar en el navegador" que monta el iframe (`sandbox="allow-scripts allow-same-origin allow-pointer-lock"`, `allow="fullscreen; gamepad"`, solo si `isAllowedWebUrl`); descargable sin sesión → link a `/login?redirect=`; con sesión → `getDownloadUrl` + `trackConversion('download_click')` + `location.assign(url)`. Cada reseña muestra "Versión X", "Versión no especificada" (build_id null) o "Versión retirada" (build ya no visible).
 
 **Campaña / UTM**: `App` llama `captureUtm()` como inicializador de `useState` (una vez). Guarda utm_source/medium/campaign/content en sessionStorage `d4g_utm`; sin UTM ni nada guardado → `{utm_source:'direct'}`; nunca pisa un UTM con 'direct'. `CampaignBanner` recibe `utm.utm_source`; al cerrarlo se guarda `d4g_banner_closed`.
 

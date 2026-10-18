@@ -125,6 +125,13 @@
   margin-bottom: 2rem;
 }
 
+.game-detail__credits {
+  margin-top: -0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .game-detail__section-title {
   font-size: 1rem;
   margin-bottom: 1rem;

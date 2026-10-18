@@ -1,0 +1,204 @@
+/* ══════════════════════════════════════════════
+   GAME BUILDS — recuadro de descarga de la ficha
+   Se apoya en .game-detail__download / __pills (gameDetail.css)
+══════════════════════════════════════════════ */
+
+.builds__note {
+  margin-top: 0.75rem;
+  max-width: none;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Plataforma ── */
+.builds__platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.builds__platform {
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-accent);
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+}
+
+.builds__platform:hover {
+  border-color: var(--blue);
+  color: var(--text-primary);
+}
+
+.builds__platform--active,
+.builds__platform--active:hover {
+  border-color: var(--blue);
+  background-color: rgba(0, 191, 255, 0.12);
+  color: var(--blue);
+}
+
+/* ── Versión ── */
+.builds__version-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.builds__label {
+  flex: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.builds__select {
+  width: auto;
+  min-width: 0;
+  flex: 1;
+  max-width: 280px;
+  min-height: 40px;
+}
+
+/* ── Juego web ── */
+.builds__player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.builds__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-accent);
+  background: #000;
+}
+
+.builds__frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.builds__player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ── Mensajes ── */
+.builds__status { min-height: 0.5rem; }
+
+.builds__msg {
+  margin-top: 0.75rem;
+  max-width: none;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.builds__msg--ok    { color: #00ff88; }
+.builds__msg--error { color: #ff6b6b; }
+
+/* ── Detalles ── */
+.builds__focus,
+.builds__block {
+  margin-top: 1.25rem;
+}
+
+.builds__focus {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(123, 47, 190, 0.55);
+  background-color: rgba(123, 47, 190, 0.12);
+}
+
+.builds__heading {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.builds__focus .builds__heading { color: #c9a2f0; }
+
+.builds__text {
+  max-width: none;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.builds__hash {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+  background-color: var(--bg-elevated);
+}
+
+.builds__hash code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.builds__copy {
+  flex: none;
+  min-height: 36px;
+  padding: 0 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.builds__copy:hover { background-color: rgba(0, 191, 255, 0.08); }
+
+.builds__install {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.builds__install summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.builds__install ol {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  line-height: 1.6;
+}
+
+.builds__platform:focus-visible,
+.builds__copy:focus-visible,
+.builds__install summary:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}

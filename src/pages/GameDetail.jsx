@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { getGameById, getReviewsByGame } from '../services/supabase'
+import { useParams, useLocation, Link } from 'react-router-dom'
+import { getGameById, getReviewsByGame, getPublishedBuilds, getDownloadUrl } from '../services/supabase'
+import { useAuth } from '../context/useAuth'
 import { trackConversion } from '../utils/track'
 import GameCover from '../components/GameCover'
 import Icon from '../components/Icon'
 import StarRating from '../components/StarRating'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
+import GameBuilds from '../components/GameBuilds'
 import '../styles/gameDetail.css'
 
 function GameDetail() {
@@ -15,17 +17,22 @@ function GameDetail() {
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
-  const [downloadMsg, setDownloadMsg] = useState(false)
+  const [builds, setBuilds]   = useState([])
+  const { user } = useAuth()
+  const { pathname } = useLocation()
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [gameData, reviewsData] = await Promise.all([
+        // Si los builds fallan, la ficha sigue funcionando ("Build próximamente")
+        const [gameData, reviewsData, buildsData] = await Promise.all([
           getGameById(id),
-          getReviewsByGame(id)
+          getReviewsByGame(id),
+          getPublishedBuilds(id).catch(() => []),
         ])
         setGame(gameData)
         setReviews(reviewsData)
+        setBuilds(buildsData)
       } catch {
         setError('No se encontró el juego.')
       } finally {
@@ -40,9 +47,12 @@ function GameDetail() {
     setReviews(prev => [newReview, ...prev])
   }
 
-  function handleDownload() {
-    setDownloadMsg(true)
+  // La Edge Function valida sesión y build, registra la descarga y firma la URL
+  async function handleDownload(build) {
+    const result = await getDownloadUrl(build.id)
     trackConversion('download_click', { game_id: id })
+    window.location.assign(result.url)
+    return result
   }
 
   // Promedio y distribución derivados del estado
@@ -108,10 +118,14 @@ function GameDetail() {
               <span className={`game-detail__status game-detail__status--${game.status}`}>
                 {game.status === 'beta' ? 'BETA' : 'RELEASED'}
               </span>
+              {game.is_academic && <span className="badge-academic">PROYECTO ACADÉMICO</span>}
             </div>
 
             <h1 className="game-detail__title">{game.title}</h1>
             <p className="game-detail__dev">por {game.developer_name}</p>
+            {game.credits && (
+              <p className="game-detail__credits">Créditos: {game.credits}</p>
+            )}
 
             <div className="game-detail__rating">
               {count > 0 ? (
@@ -131,27 +145,15 @@ function GameDetail() {
               <p className="game-detail__description">{game.description}</p>
             )}
 
-            {/* ── Descarga ── */}
-            <section className="game-detail__download card" aria-labelledby="gd-download-title">
-              <h2 id="gd-download-title" className="game-detail__section-title">Descarga</h2>
-              <ul className="game-detail__pills">
-                <li className="game-detail__pill game-detail__pill--free">Demo gratuita</li>
-                <li className="game-detail__pill">{game.platform || 'Windows'}</li>
-                <li className="game-detail__pill">{game.download_size || 'Tamaño por confirmar'}</li>
-                <li className="game-detail__pill">{game.version || 'Beta'}</li>
-              </ul>
-              <button
-                type="button"
-                className="btn btn-primary game-detail__download-btn"
-                onClick={handleDownload}
-              >
-                <Icon name="download" size={18} />
-                Descargar juego
-              </button>
-              <p className="game-detail__download-msg" role="status">
-                {downloadMsg ? 'La descarga estará disponible pronto.' : ''}
-              </p>
-            </section>
+            {/* ── Descarga / juego en el navegador ── */}
+            <GameBuilds
+              key={id}
+              game={game}
+              builds={builds}
+              signedIn={Boolean(user)}
+              loginHref={`/login?redirect=${encodeURIComponent(pathname)}`}
+              onDownload={handleDownload}
+            />
 
             {/* ── Distribución de calificaciones ── */}
             <section className="game-detail__dist" aria-labelledby="gd-dist-title">

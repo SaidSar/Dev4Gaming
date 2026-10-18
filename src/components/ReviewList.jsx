@@ -37,6 +37,11 @@ function ReviewList({ reviews }) {
           </div>
 
           <p className="review-item__comment">{review.comment}</p>
+          <span className="review-item__version">
+            {review.build
+              ? `Versión ${review.build.version}`
+              : review.build_id ? 'Versión retirada' : 'Versión no especificada'}
+          </span>
 
         </li>
       ))}
