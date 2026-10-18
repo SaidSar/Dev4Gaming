@@ -4,6 +4,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from './Icon'
+import { trackEvent } from '../utils/track'
 import {
   PLATFORM_LABEL, PLATFORM_ORDER, formatBytes, detectPlatform, isAllowedWebUrl,
 } from '../utils/builds'
@@ -181,7 +182,10 @@ function GameBuilds({ game, builds, initialBuildId, signedIn, loginHref, onDownl
             <button
               type="button"
               className="btn btn-primary game-detail__download-btn"
-              onClick={() => setPlaying(true)}
+              onClick={() => {
+                setPlaying(true)
+                trackEvent('web_play_start', { game_id: game.id, build_id: build.id, version: build.version })
+              }}
             >
               <Icon name="play" size={16} />
               Jugar en el navegador

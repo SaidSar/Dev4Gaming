@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { getGameById, getReviewsByGame, getPublishedBuilds, getDownloadUrl } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
-import { trackConversion } from '../utils/track'
+import { trackConversion, trackEvent } from '../utils/track'
 import { rememberDownload, getPendingRating, markRated } from '../utils/feedback'
 import GameCover from '../components/GameCover'
 import Icon from '../components/Icon'
@@ -76,6 +76,9 @@ function GameDetail() {
   async function handleDownload(build) {
     const result = await getDownloadUrl(build.id)
     trackConversion('download_click', { game_id: id })
+    trackEvent('build_download', {
+      game_id: id, build_id: build.id, version: build.version, platform: build.platform,
+    })
     rememberDownload(id, build)
     setFeedbackBuildId(build.id)
     setRatePrompt({ build_id: build.id, version: build.version, platform: build.platform })

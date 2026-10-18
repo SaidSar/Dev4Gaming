@@ -19,6 +19,20 @@ export function trackEvent(event, params = {}) {
 }
 
 /**
+ * User property `user_role` de GA4 para segmentar el embudo por público:
+ * 'anonymous' | 'player' | 'dev_pending' | 'dev_verified' | 'admin'.
+ * No-op sin gtag (igual que trackEvent).
+ */
+export function setUserRole(role) {
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
+  try {
+    window.gtag('set', 'user_properties', { user_role: role })
+  } catch (err) {
+    console.warn('[track] gtag falló al fijar user_role', err)
+  }
+}
+
+/**
  * @param {'sign_up'|'submit_review'|'download_click'|'play_click'} event
  * @param {object} extra - p. ej. { game_id, rating }
  */

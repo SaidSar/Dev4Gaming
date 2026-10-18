@@ -41,7 +41,7 @@ src/
 │   ├── roles.js             # isVerifiedDev, devEntryPath, safeRedirect, postLoginPath (destino tras login según rol)
 │   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
 │   ├── builds.js            # PLATFORM_LABEL/ORDER, formatBytes, detectPlatform, isAllowedWebUrl
-│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) solo GA4 (no-op sin gtag)
+│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) y setUserRole(role) solo GA4 (no-op sin gtag)
 ├── context/
 │   ├── auth-context.js      # createContext(null)
 │   ├── AuthContext.jsx      # <AuthProvider>: sesión, profile, verification, displayName, loading, refresh
@@ -184,7 +184,38 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Invitación a registrarse** (`useSignupInvite` + `SignupInviteModal`): sin sesión (espera `loading`), solo en `/games` y `/juego/:id`, 3 s tras entrar; no abre si el foco está dentro de `[data-no-signup-invite]` (ReviewForm) y reintenta cada 3 s. Una vez por sesión: sessionStorage `d4g_signup_invite`. CTAs → `/login?mode=register&redirect=…` y `/login?redirect=…`. Bloquea scroll del body y pone `inert` en `#root`. GA4: `signup_modal_view {page}`, `signup_modal_cta {action}`, `signup_modal_dismiss {method}`. `sign_up` lleva `method: 'email'`; marcarlo como evento clave se hace en GA4 Admin.
 
-**Analítica**: embudo propio en `conversion_events` (ver arriba). NO hay snippet de GA4/gtag/GTM cargado; `trackConversion` llamará a `gtag` en cuanto se agregue.
+**Analítica (GA4)**: hoy **no hay GA4 cargado**. `trackEvent(event, params)` y `setUserRole(role)` (utils/track.js) no hacen nada si `window.gtag` no existe; `trackConversion` además escribe siempre en `conversion_events` (embudo propio). Todos los eventos llevan los UTM de la sesión.
+
+User property **`user_role`** (`setUserRole`, desde `AuthContext` al terminar de cargar): `anonymous` | `player` | `dev_pending` | `dev_verified` | `admin` (= `profiles.role`).
+
+| Evento | Dónde | Parámetros |
+|---|---|---|
+| `sign_up` | Login (registro; vía `trackConversion`) | `method: 'email'`, `role: 'player'\|'developer'` |
+| `login` | Login (inicio de sesión) | `method: 'email'` |
+| `build_download` | GameDetail (URL firmada OK) | `game_id, build_id, version, platform` |
+| `web_play_start` | GameBuilds ("Jugar en el navegador") | `game_id, build_id, version` |
+| `review_submit` | ReviewForm (reseña publicada) | `game_id, build_id, version, rating, anonymous` |
+| `bug_report_submit` | BugReportForm | `game_id, build_id, severity, has_steps, has_screenshot` |
+| `dev_verification_request` | VerifyDeveloper | `type, resubmission` |
+| `build_upload` | DevDashboard (versión guardada) | `game_id, build_id, version, platform, storage_provider, size_bytes` |
+| `hero_video_play` / `hero_video_unmute` / `hero_video_complete` / `hero_cta_click` | HeroInfluencer | ver **Hero** |
+| `signup_modal_view` / `signup_modal_cta` / `signup_modal_dismiss` | useSignupInvite | ver **Invitación** |
+| `play_click`, `download_click`, `submit_review` | `trackConversion` (embudo propio; también llegan a GA4) | `game_id` (+ `rating`). En GA4 usar `review_submit`, no `submit_review`, para no contar doble |
+
+**Activar GA4 (pendiente, sin tocar el código de eventos):**
+1. `.env`: `VITE_GA_ID=G-XXXXXXXXXX` (y la misma variable en el hosting).
+2. `index.html`, dentro de `<head>` (Vite reemplaza `%VITE_GA_ID%` al compilar):
+```html
+<script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_ID%"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '%VITE_GA_ID%');
+</script>
+```
+3. GA4 Admin: marcar `sign_up`, `build_download` y `review_submit` como eventos clave; crear la dimensión personalizada de usuario `user_role` y las de evento que se quieran analizar (`platform`, `severity`, `version`…).
+4. Si se agrega aviso de cookies, inicializar con Consent Mode antes del `config`.
 
 ## 6. Sistema de diseño
 
@@ -232,7 +263,7 @@ Breakpoints usados: 900, 768, 640, 560, 480px. Respeta `prefers-reduced-motion`.
 Completo: landing, catálogo con filtro por género, detalle, reseñas anónimas/autenticadas con estrellas, registro/login, perfil, solicitud de verificación de desarrollador.
 
 Pendiente / deuda:
-- Cargar GA4 (gtag) en `index.html`; eventos faltantes: `view_item`, `select_content` (filtro), `login`, CTA de Landing. Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
+- Activar GA4 (ver **Analítica (GA4)**: script + `VITE_GA_ID`); eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
 - Publicación de juegos por desarrolladores verificados (no hay tabla/política de escritura ni UI).
 - Panel admin para aprobar verificaciones y moderar reseñas.
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.

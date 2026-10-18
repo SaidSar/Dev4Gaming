@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { postReview } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { getUtm } from '../utils/utm'
-import { trackConversion } from '../utils/track'
+import { trackConversion, trackEvent } from '../utils/track'
 import { hasAnonReview, lockAnonReview, markRated } from '../utils/feedback'
 import BuildSelect from './BuildSelect'
 import '../styles/reviewForm.css'
@@ -70,6 +70,13 @@ function ReviewForm({ gameId, builds = [], buildId = '', onBuildChange, loginHre
       }
       onReviewPosted?.(review)
       trackConversion('submit_review', { game_id: gameId, rating: review.rating })
+      trackEvent('review_submit', {
+        game_id: gameId,
+        build_id: review.build_id,
+        version: review.build?.version ?? null,
+        rating: review.rating,
+        anonymous: !user,
+      })
     } catch (err) {
       setError(reviewError(err))
     } finally {

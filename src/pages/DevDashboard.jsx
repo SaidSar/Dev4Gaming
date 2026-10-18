@@ -7,6 +7,7 @@ import { getMyGames, getBuildMetrics, createBuild, updateBuildStatus } from '../
 import { uploadBuildFile } from '../services/buildUpload'
 import { PLATFORM_LABEL, sha256Hex, safeFileName } from '../utils/builds'
 import { isVerifiedDev } from '../utils/roles'
+import { trackEvent } from '../utils/track'
 import BuildUploadForm from '../components/BuildUploadForm'
 import '../styles/devDashboard.css'
 
@@ -99,7 +100,7 @@ function DevDashboard() {
       }
 
       onPhase('save')
-      await createBuild({
+      const created = await createBuild({
         game_id: gameId,
         version: values.version,
         platform: values.platform,
@@ -112,6 +113,14 @@ function DevDashboard() {
         test_focus:       values.test_focus.trim() || null,
         min_requirements: values.min_requirements.trim() || null,
         status: 'pending_review',
+      })
+      trackEvent('build_upload', {
+        game_id: gameId,
+        build_id: created.id,
+        version: created.version,
+        platform: created.platform,
+        storage_provider: created.storage_provider,
+        size_bytes: created.size_bytes,
       })
       reloadMetrics()
     } catch (err) {

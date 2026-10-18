@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { submitVerification } from '../services/supabase'
+import { trackEvent } from '../utils/track'
 import '../styles/auth.css'
 
 const STATUS_LABEL = { pending: 'EN REVISIÓN', approved: 'VERIFICADO', rejected: 'RECHAZADO' }
@@ -35,6 +36,10 @@ function VerifyDeveloper() {
         website: form.website.trim() || null,
         portfolio_url: form.portfolio_url.trim() || null,
         tax_id: form.tax_id.trim() || null,
+      })
+      trackEvent('dev_verification_request', {
+        type: form.type,
+        resubmission: verification?.status === 'rejected',
       })
       await refresh()
     } catch {

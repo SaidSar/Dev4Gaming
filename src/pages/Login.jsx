@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { signIn, signUp } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { getUtm } from '../utils/utm'
-import { trackConversion } from '../utils/track'
+import { trackConversion, trackEvent } from '../utils/track'
 import { safeRedirect, postLoginPath } from '../utils/roles'
 import '../styles/auth.css'
 
@@ -57,6 +57,7 @@ function Login() {
     try {
       if (mode === 'login') {
         await signIn({ email, password: form.password })
+        trackEvent('login', { method: 'email' })
       } else {
         const data = await signUp({
           email,
@@ -66,7 +67,7 @@ function Login() {
           signupIntent: intent,
         })
         // GA4: sign_up es evento recomendado; márcalo como evento clave en Admin
-        trackConversion('sign_up', { method: 'email' })
+        trackConversion('sign_up', { method: 'email', role: intent })
         if (!data.session) {
           setInfo('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.')
           setMode('login')

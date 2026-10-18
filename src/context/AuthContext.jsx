@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, getProfile, getMyVerification } from '../services/supabase'
 import { AuthContext } from './auth-context'
+import { setUserRole } from '../utils/track'
 
 // Solo consulta, no toca el estado
 function fetchUserData(id) {
@@ -44,6 +45,12 @@ export function AuthProvider({ children }) {
   const profile      = userId && ready ? data.profile : null
   const verification = userId && ready ? data.verification : null
   const displayName  = profile?.display_name || user?.email?.split('@')[0] || ''
+  // GA4: user_role se actualiza al terminar de cargar sesión y perfil
+  const userRole     = loading ? null : user ? (profile?.role ?? 'player') : 'anonymous'
+
+  useEffect(() => {
+    if (userRole) setUserRole(userRole)
+  }, [userRole])
 
   const refresh = useCallback(async () => {
     if (!userId) return

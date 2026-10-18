@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { submitBugReport, uploadBugScreenshot } from '../services/supabase'
 import { useAuth } from '../context/useAuth'
 import { getDeviceInfo, describeDevice } from '../utils/feedback'
+import { trackEvent } from '../utils/track'
 import BuildSelect from './BuildSelect'
 import '../styles/reviewForm.css'
 import '../styles/bugReportForm.css'
@@ -75,6 +76,13 @@ function BugReportForm({ gameId, builds = [], buildId = '', onBuildChange, login
         steps_to_reproduce: form.steps.trim() || null,
         device_info:        device,
         screenshot_path,
+      })
+      trackEvent('bug_report_submit', {
+        game_id: gameId,
+        build_id: buildId || null,
+        severity: form.severity,
+        has_steps: Boolean(form.steps.trim()),
+        has_screenshot: Boolean(screenshot_path),
       })
       setSent(true)
       setForm(EMPTY)
