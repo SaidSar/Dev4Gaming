@@ -28,6 +28,8 @@ VITE_SUPABASE_ANON_KEY=
 La anon key es pública por diseño; la seguridad depende de RLS. Nunca usar `service_role` en el frontend.
 Proyecto Supabase ref: `kbygvkpvushuldyygcba`.
 
+**Despliegue (Vercel)**: proyecto `dev4gaming` (scope `saidsars-projects`) conectado a GitHub `SaidSar/Dev4Gaming`; cada push a `main` despliega a producción → https://dev4gaming.vercel.app. Preset Vite (`npm run build` → `dist`). `vercel.json` reescribe todo a `/index.html` (SPA). `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` cargadas en production/preview/development (cambiarlas exige redeploy). Supabase Auth: Site URL = dominio de Vercel; Redirect URLs `https://dev4gaming.vercel.app/**` y `http://localhost:5173/**`; `signUp` manda `emailRedirectTo: window.location.origin`. En PowerShell usar `npx.cmd` (la política de ejecución bloquea `npx.ps1`).
+
 ## 2. Estructura
 
 ```text
