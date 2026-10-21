@@ -10,8 +10,8 @@ import '../styles/landing.css'
 // Campaña del hero: Reel promocional 9:16 (24 s, subtítulos incrustados).
 // Versiones web en public/media/ generadas con ffmpeg desde el original de
 // 1080x1920 (que se queda fuera del repo, para redes): WebM VP9 + MP4 H.264
-// 720x1280 con faststart y poster JPG del segundo 1. Ajusta handle, nombre,
-// juego y reviewHref (p. ej. la URL de su reseña en TikTok).
+// 720x1280 con faststart y poster JPG del segundo 1. Ajusta handle (va en los
+// eventos GA4 del video), juego y reviewHref (p. ej. la URL de su reseña en TikTok).
 const HERO_CAMPAIGN = {
   sources: [
     { src: '/media/dev4gaming-promo.webm', type: 'video/webm' },
@@ -20,7 +20,6 @@ const HERO_CAMPAIGN = {
   posterSrc:        '/media/dev4gaming-promo-poster.jpg',
   videoLabel:       'Video promocional de Dev4Gaming',
   influencerHandle: 'dev4gaming',
-  influencerName:   'Dev4Gaming',
   gameId:           '5d2be034-b5a1-4116-9c61-6642fcddb0b4', // Shadow Forge
   gameTitle:        'Shadow Forge',
   duration:         '0:24',

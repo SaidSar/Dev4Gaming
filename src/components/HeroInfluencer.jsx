@@ -6,6 +6,7 @@ import { trackEvent } from '../utils/track'
 import '../styles/heroInfluencer.css'
 
 const COMPLETE_AT = 0.9 // hero_video_complete se dispara al 90%
+const CTA_PLACEMENT = 'hero_reel' // atribuye en GA4 las conversiones del Reel
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined'
@@ -21,7 +22,6 @@ function HeroInfluencer({
   posterSrc,
   videoLabel = 'Video promocional de Dev4Gaming',
   influencerHandle,
-  influencerName,
   gameId,
   gameTitle,
   duration,
@@ -208,7 +208,7 @@ function HeroInfluencer({
           </div>
 
           <figcaption className="hero-inf__figcaption">
-            <span>{influencerName} prueba {gameTitle} en beta · {duration}</span>
+            <span>Gameplay real de {gameTitle} en beta · {duration}</span>
             {reviewHref && (isExternalReview ? (
               <a href={reviewHref} target="_blank" rel="noopener noreferrer">Ver su reseña</a>
             ) : (
@@ -222,7 +222,7 @@ function HeroInfluencer({
           <Link
             to={`/juego/${gameId}`}
             className="hero-inf__cta hero-inf__cta--primary"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'jugar', game_id: gameId })}
+            onClick={() => trackEvent('hero_cta_click', { cta: 'jugar', game_id: gameId, placement: CTA_PLACEMENT })}
           >
             Probar el juego del video
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -232,7 +232,7 @@ function HeroInfluencer({
           <Link
             to={developerHref}
             className="hero-inf__cta hero-inf__cta--ghost"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'desarrollador' })}
+            onClick={() => trackEvent('hero_cta_click', { cta: 'desarrollador', placement: CTA_PLACEMENT })}
           >
             {/* Un solo hijo de texto: el gap del flex separaría el span */}
             <span>Soy desarrollador<span className="hero-inf__desktop-only">: subir mi juego</span></span>
