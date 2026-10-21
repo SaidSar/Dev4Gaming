@@ -6,6 +6,7 @@ import { trackEvent } from '../utils/track'
 import '../styles/heroInfluencer.css'
 
 const COMPLETE_AT = 0.9 // hero_video_complete se dispara al 90%
+const CTA_PLACEMENT = 'hero_reel' // atribuye en GA4 las conversiones del Reel
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined'
@@ -17,11 +18,10 @@ function formatCount(n) {
 }
 
 function HeroInfluencer({
-  videoSrc,
+  sources = [],          // [{ src, type }] en orden de preferencia (WebM antes que MP4)
   posterSrc,
-  captionsSrc,
+  videoLabel = 'Video promocional de Dev4Gaming',
   influencerHandle,
-  influencerName,
   gameId,
   gameTitle,
   duration,
@@ -31,17 +31,15 @@ function HeroInfluencer({
   statsLoading = false,
 }) {
   const videoRef = useRef(null)
-  const trackRef = useRef(null)
   const completedRef = useRef(false)
   const [reducedMotion] = useState(prefersReducedMotion)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(true)
   const [progress, setProgress] = useState(0)
-  const [caption, setCaption] = useState('')
-  const [failed, setFailed] = useState(!videoSrc)
+  const [failed, setFailed] = useState(sources.length === 0)
 
   const handle = influencerHandle.replace(/^@/, '')
-  const videoLabel = `${influencerName} prueba ${gameTitle} en beta`
+  const sourcesKey = sources.map((s) => s.src).join('|')
 
   // Autoplay silenciado salvo con prefers-reduced-motion. Se fuerza `muted`
   // como propiedad porque los navegadores solo permiten autoplay sin sonido.
@@ -51,23 +49,7 @@ function HeroInfluencer({
     video.muted = true
     if (reducedMotion) video.pause()
     else video.play().catch(() => { /* el navegador bloqueó el autoplay: queda el poster */ })
-  }, [reducedMotion, videoSrc])
-
-  // Subtítulos: el <track> carga los cues y aquí se pintan con el estilo del
-  // mockup (encima de los controles). Sin JS, el navegador los muestra nativos;
-  // con JS se ocultan en onLoadedMetadata para no duplicarlos.
-  useEffect(() => {
-    const trackEl = trackRef.current
-    if (!trackEl) return
-    const onCueChange = () => setCaption(trackEl.track.activeCues?.[0]?.text ?? '')
-    trackEl.addEventListener('cuechange', onCueChange)
-    return () => trackEl.removeEventListener('cuechange', onCueChange)
-  }, [captionsSrc, failed])
-
-  function hideNativeCaptions(e) {
-    const track = e.currentTarget.textTracks[0]
-    if (track) track.mode = 'hidden'
-  }
+  }, [reducedMotion, sourcesKey])
 
   function togglePlay() {
     const video = videoRef.current
@@ -127,44 +109,49 @@ function HeroInfluencer({
             {failed ? (
               posterSrc && <img className="hero-inf__video" src={posterSrc} alt={videoLabel} />
             ) : (
+              // Subtítulos incrustados en el Reel: no hay <track> que duplicarlos.
+              // El error de carga lo emite el último <source>, no el <video>.
               <video
+                key={sourcesKey}
                 ref={videoRef}
                 className="hero-inf__video"
-                src={videoSrc}
                 poster={posterSrc}
                 autoPlay={!reducedMotion}
                 muted
                 loop
                 playsInline
                 preload="metadata"
-                aria-label={`Video: ${videoLabel}`}
+                aria-label={videoLabel}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
                 onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
                 onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={hideNativeCaptions}
-                onError={() => setFailed(true)}
               >
-                {captionsSrc && (
-                  <track ref={trackRef} kind="captions" src={captionsSrc} srcLang="es" label="Español" default />
-                )}
+                {sources.map((s, i) => (
+                  <source
+                    key={s.src}
+                    src={s.src}
+                    type={s.type}
+                    onError={i === sources.length - 1 ? () => setFailed(true) : undefined}
+                  />
+                ))}
               </video>
             )}
 
             <div className="hero-inf__shade" aria-hidden="true" />
 
-            <div className="hero-inf__top">
-              <span className="hero-inf__handle">
-                <span className="hero-inf__avatar" aria-hidden="true">
-                  {handle.charAt(0).toUpperCase()}
-                </span>
-                @{handle}
-              </span>
-              <span className="hero-inf__collab">Colaboración</span>
-            </div>
-
-            {!failed && caption && (
-              <p className="hero-inf__caption" aria-hidden="true">{caption}</p>
+            {/* Sin autoplay (reduced-motion o bloqueado): poster + play grande */}
+            {!failed && !playing && progress === 0 && (
+              <button
+                type="button"
+                className="hero-inf__big-play"
+                onClick={togglePlay}
+                aria-label="Reproducir video"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 4l13 8-13 8z" fill="currentColor" />
+                </svg>
+              </button>
             )}
 
             {!failed && (
@@ -201,7 +188,8 @@ function HeroInfluencer({
                   type="button"
                   className="hero-inf__mute"
                   onClick={toggleMute}
-                  aria-label={muted ? 'Activar sonido del video' : 'Silenciar video'}
+                  aria-label="Sonido del video"
+                  aria-pressed={!muted}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -220,11 +208,11 @@ function HeroInfluencer({
           </div>
 
           <figcaption className="hero-inf__figcaption">
-            <span>{influencerName} prueba {gameTitle} en beta · {duration}</span>
+            <span>Gameplay real de {gameTitle} en beta · {duration}</span>
             {reviewHref && (isExternalReview ? (
-              <a href={reviewHref} target="_blank" rel="noopener noreferrer">Ver su reseña</a>
+              <a href={reviewHref} target="_blank" rel="noopener noreferrer">Ver reseñas del juego</a>
             ) : (
-              <Link to={reviewHref}>Ver su reseña</Link>
+              <Link to={reviewHref}>Ver reseñas del juego</Link>
             ))}
           </figcaption>
         </figure>
@@ -234,7 +222,7 @@ function HeroInfluencer({
           <Link
             to={`/juego/${gameId}`}
             className="hero-inf__cta hero-inf__cta--primary"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'jugar', game_id: gameId })}
+            onClick={() => trackEvent('hero_cta_click', { cta: 'jugar', game_id: gameId, placement: CTA_PLACEMENT })}
           >
             Probar el juego del video
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -244,7 +232,7 @@ function HeroInfluencer({
           <Link
             to={developerHref}
             className="hero-inf__cta hero-inf__cta--ghost"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'desarrollador' })}
+            onClick={() => trackEvent('hero_cta_click', { cta: 'desarrollador', placement: CTA_PLACEMENT })}
           >
             {/* Un solo hijo de texto: el gap del flex separaría el span */}
             <span>Soy desarrollador<span className="hero-inf__desktop-only">: subir mi juego</span></span>

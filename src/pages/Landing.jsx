@@ -7,20 +7,22 @@ import Icon from '../components/Icon'
 import HeroInfluencer from '../components/HeroInfluencer'
 import '../styles/landing.css'
 
-// Campaña del hero. ⚠ Archivos de PRUEBA en public/media/:
-// reemplaza hero-influencer.mp4 por el MP4 real del influencer (vertical 9:16,
-// H.264), hero-influencer-poster.svg por un fotograma real (JPG/WebP) y
-// hero-influencer.es.vtt por los subtítulos reales; luego ajusta handle,
-// nombre, juego, duración y reviewHref (p. ej. la URL de su reseña en TikTok).
+// Campaña del hero: Reel promocional 9:16 (24 s, subtítulos incrustados).
+// Versiones web en public/media/ generadas con ffmpeg desde el original de
+// 1080x1920 (que se queda fuera del repo, para redes): WebM VP9 + MP4 H.264
+// 720x1280 con faststart y poster JPG del segundo 1. Ajusta handle (va en los
+// eventos GA4 del video), juego y reviewHref (ficha del juego con sus reseñas).
 const HERO_CAMPAIGN = {
-  videoSrc:         '/media/hero-influencer.mp4',
-  posterSrc:        '/media/hero-influencer-poster.svg',
-  captionsSrc:      '/media/hero-influencer.es.vtt',
-  influencerHandle: '@influencer',
-  influencerName:   'Influencer',
+  sources: [
+    { src: '/media/dev4gaming-promo.webm', type: 'video/webm' },
+    { src: '/media/dev4gaming-promo.mp4',  type: 'video/mp4' },
+  ],
+  posterSrc:        '/media/dev4gaming-promo-poster.jpg',
+  videoLabel:       'Video promocional de Dev4Gaming',
+  influencerHandle: 'dev4gaming',
   gameId:           '5d2be034-b5a1-4116-9c61-6642fcddb0b4', // Shadow Forge
   gameTitle:        'Shadow Forge',
-  duration:         '0:30',
+  duration:         '0:24',
   reviewHref:       '/juego/5d2be034-b5a1-4116-9c61-6642fcddb0b4',
 }
 

@@ -82,14 +82,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 0.25rem;
+  width: 100%;
+  max-width: 360px;
+  margin: 0.25rem auto 0;
 }
 
 .hero-inf__frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 9 / 16;
-  max-height: 560px;
+  aspect-ratio: 9 / 16; /* Reel 1080x1920: sin bandas ni recorte */
   border-radius: 20px;
   overflow: hidden;
   background: linear-gradient(160deg, #1C1F4A 0%, #10132C 60%, #0A0C1E 100%);
@@ -110,76 +111,34 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 55%;
+  height: 22%; /* solo detrás de los controles: no tapa los subtítulos incrustados */
   background: linear-gradient(0deg, rgba(5, 6, 14, 0.95) 0%, rgba(5, 6, 14, 0) 100%);
   pointer-events: none;
 }
 
-.hero-inf__top {
+.hero-inf__big-play {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.hero-inf__handle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  background: rgba(5, 6, 14, 0.62);
-  padding: 5px 10px 5px 5px;
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #fff;
-}
-
-.hero-inf__avatar {
-  flex: none;
-  width: 26px;
-  height: 26px;
+  top: 50%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid var(--hero-violet);
-  background: #D6A985;
-  color: #1E1A2E;
-  font-size: 0.75rem;
-  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: rgba(5, 6, 14, 0.55);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding-left: 4px; /* centra ópticamente el triángulo */
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(0, 191, 255, 0.45);
+  transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.hero-inf__collab {
-  flex: none;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  background: rgba(139, 92, 246, 0.85);
-  padding: 5px 8px;
-  border-radius: 6px;
-}
-
-.hero-inf__caption {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 72px;
-  max-width: none;
-  text-align: center;
-  font-size: 1rem;
-  line-height: 1.35;
-  font-weight: 600;
-  color: #fff;
-  background: rgba(5, 6, 14, 0.72);
-  padding: 8px 10px;
-  border-radius: 8px;
+.hero-inf__big-play:hover {
+  background: rgba(5, 6, 14, 0.8);
+  box-shadow: 0 0 32px rgba(155, 62, 222, 0.6);
 }
 
 .hero-inf__controls {
@@ -348,6 +307,26 @@
 }
 
 /* ══ Escritorio ══════════════════════════════════ */
+/* Móvil: el video no pasa de 62svh. El alto manda y el ancho sale del
+   aspect-ratio (sin recorte: el sello y los subtítulos van incrustados).
+   Aun así no cabe con el texto, así que los CTAs suben antes del video
+   para quedar above the fold en 360x780 y 390x844. */
+@media (max-width: 480px) {
+  .hero-inf__inner {
+    grid-template-areas:
+      "intro"
+      "ctas"
+      "media";
+  }
+
+  .hero-inf__frame {
+    width: auto;
+    height: min(62svh, calc((100vw - 2rem) * 16 / 9));
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
 @media (min-width: 900px) {
   .hero-inf { background-size: 64px 64px; }
 
@@ -383,15 +362,10 @@
   .hero-inf__media { gap: 14px; margin-top: 0; }
 
   .hero-inf__frame {
-    max-height: 676px;
     border-radius: 22px;
     box-shadow: 0 30px 80px rgba(46, 123, 255, 0.22);
   }
 
-  .hero-inf__top      { left: 14px; right: 14px; top: 14px; }
-  .hero-inf__handle   { padding: 6px 12px 6px 6px; }
-  .hero-inf__avatar   { width: 30px; height: 30px; }
-  .hero-inf__caption  { left: 16px; right: 16px; bottom: 76px; font-size: 1.0625rem; padding: 8px 12px; }
   .hero-inf__controls { left: 14px; right: 14px; bottom: 14px; }
   .hero-inf__mute     { padding: 0 14px; }
   .hero-inf__mute-text { display: inline; }
