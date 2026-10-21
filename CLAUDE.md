@@ -53,7 +53,7 @@ src/
 ├── components/
 │   ├── Navbar.jsx           # global, hamburguesa <640px; "Desarrolladores" (o "Mi panel" si es dev verificado) y Login/Perfil según sesión
 │   ├── SignupInviteModal.jsx # invitación a registrarse (portal, role=dialog, focus trap); montada en App vía <SignupInvite>
-│   ├── HeroInfluencer.jsx   # hero de Landing: video 9:16 del influencer + H1 + CTAs + conteos (2 col ≥900px)
+│   ├── HeroInfluencer.jsx   # hero de Landing: Reel promocional 9:16 + H1 + CTAs + conteos (2 col ≥900px)
 │   ├── CampaignBanner.jsx   # bajo el navbar si utm_source ∈ tiktok|instagram|discord|email; × lo oculta en la sesión
 │   ├── ProtectedRoute.jsx   # redirige a loginTo si no hay user
 │   ├── GameCover.jsx        # portada 16:10 desde cover_url; respaldo degradado + título si falta/falla
@@ -76,7 +76,7 @@ src/
 ├── styles/                  # global.css + 1 CSS por página/componente
 └── assets/                  # hero.png (sin usar), vite.svg
 public/covers/*.svg          # portadas originales 1600x1000 (void-runner, shadow-forge, pixel-siege)
-public/media/                # ⚠ medios de PRUEBA del hero (mp4, poster svg, .vtt); config en HERO_CAMPAIGN de Landing.jsx
+public/media/                # Reel del hero 720x1280: dev4gaming-promo.webm (VP9) + .mp4 (H.264, faststart) + -poster.jpg; config en HERO_CAMPAIGN de Landing.jsx (original 1080x1920 fuera del repo)
 supabase_setup.sql           # ⚠ desactualizado: solo games/reviews (ver §4)
 supabase_funnel.sql          # migración del embudo (aplicada 2026-10-12)
 supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplicada 2026-10-18)
@@ -187,7 +187,7 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Aviso para calificar**: tras una descarga exitosa se guarda en localStorage `d4g_downloads` y se muestra "¿Ya probaste la vX?" (también al volver otro día). "Calificar ahora" → `?build=<id>`, baja a `#resena` y enfoca la 1.ª estrella; "Ahora no" o reseñar ese build lo marca en `d4g_rated_builds`.
 
-**Hero** (`HeroInfluencer`): autoplay muted salvo `prefers-reduced-motion`; subtítulos del `<track>` pintados a mano (mode hidden + cuechange); si el video falla muestra el poster. Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
+**Hero** (`HeroInfluencer`): `sources` [{src, type}] (WebM antes que MP4), autoplay muted salvo `prefers-reduced-motion` (entonces poster + botón de play central); subtítulos incrustados en el video (sin `<track>`); botón de sonido con `aria-pressed`; si falla el último `<source>` muestra el poster. Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
 
 **Invitación a registrarse** (`useSignupInvite` + `SignupInviteModal`): sin sesión (espera `loading`), solo en `/games` y `/juego/:id`, 3 s tras entrar; no abre si el foco está dentro de `[data-no-signup-invite]` (ReviewForm) y reintenta cada 3 s. Una vez por sesión: sessionStorage `d4g_signup_invite`. CTAs → `/login?mode=register&redirect=…` y `/login?redirect=…`. Bloquea scroll del body y pone `inert` en `#root`. GA4: `signup_modal_view {page}`, `signup_modal_cta {action}`, `signup_modal_dismiss {method}`. `sign_up` lleva `method: 'email'`; marcarlo como evento clave se hace en GA4 Admin.
 
@@ -277,6 +277,6 @@ Pendiente / deuda:
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
 - Búsqueda por texto / orden en catálogo; paginación.
 - Ruta 404; `index.html` con `lang="en"` y `<title>dev4gaming</title>` genéricos; sin meta SEO/OG.
-- Hero: reemplazar medios de prueba de `public/media/` por el MP4/poster/.vtt reales del influencer y ajustar `HERO_CAMPAIGN`.
+- Hero: `influencerHandle`/`influencerName` de `HERO_CAMPAIGN` siguen como placeholder (figcaption y parámetros GA4).
 - `supabase_setup.sql` y README (plantilla Vite) desactualizados.
 - RLS de reviews permite `user_id NULL` con cualquier `user_name` (suplantación de nombres); sin rate limit.
