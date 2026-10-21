@@ -307,6 +307,26 @@
 }
 
 /* ══ Escritorio ══════════════════════════════════ */
+/* Móvil: el video no pasa de 62svh. El alto manda y el ancho sale del
+   aspect-ratio (sin recorte: el sello y los subtítulos van incrustados).
+   Aun así no cabe con el texto, así que los CTAs suben antes del video
+   para quedar above the fold en 360x780 y 390x844. */
+@media (max-width: 480px) {
+  .hero-inf__inner {
+    grid-template-areas:
+      "intro"
+      "ctas"
+      "media";
+  }
+
+  .hero-inf__frame {
+    width: auto;
+    height: min(62svh, calc((100vw - 2rem) * 16 / 9));
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
 @media (min-width: 900px) {
   .hero-inf { background-size: 64px 64px; }
 

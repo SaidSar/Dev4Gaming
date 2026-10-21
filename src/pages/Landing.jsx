@@ -19,8 +19,8 @@ const HERO_CAMPAIGN = {
   ],
   posterSrc:        '/media/dev4gaming-promo-poster.jpg',
   videoLabel:       'Video promocional de Dev4Gaming',
-  influencerHandle: '@influencer',
-  influencerName:   'Influencer',
+  influencerHandle: 'dev4gaming',
+  influencerName:   'Dev4Gaming',
   gameId:           '5d2be034-b5a1-4116-9c61-6642fcddb0b4', // Shadow Forge
   gameTitle:        'Shadow Forge',
   duration:         '0:24',

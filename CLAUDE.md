@@ -187,7 +187,7 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Aviso para calificar**: tras una descarga exitosa se guarda en localStorage `d4g_downloads` y se muestra "¿Ya probaste la vX?" (también al volver otro día). "Calificar ahora" → `?build=<id>`, baja a `#resena` y enfoca la 1.ª estrella; "Ahora no" o reseñar ese build lo marca en `d4g_rated_builds`.
 
-**Hero** (`HeroInfluencer`): `sources` [{src, type}] (WebM antes que MP4), autoplay muted salvo `prefers-reduced-motion` (entonces poster + botón de play central); subtítulos incrustados en el video (sin `<track>`); botón de sonido con `aria-pressed`; si falla el último `<source>` muestra el poster. Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
+**Hero** (`HeroInfluencer`): `sources` [{src, type}] (WebM antes que MP4), autoplay muted salvo `prefers-reduced-motion` (entonces poster + botón de play central); subtítulos incrustados en el video (sin `<track>`); botón de sonido con `aria-pressed`; si falla el último `<source>` muestra el poster. En ≤480px el video se limita a 62svh y los CTAs van antes del video (above the fold en 360×780 y 390×844). Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
 
 **Invitación a registrarse** (`useSignupInvite` + `SignupInviteModal`): sin sesión (espera `loading`), solo en `/games` y `/juego/:id`, 3 s tras entrar; no abre si el foco está dentro de `[data-no-signup-invite]` (ReviewForm) y reintenta cada 3 s. Una vez por sesión: sessionStorage `d4g_signup_invite`. CTAs → `/login?mode=register&redirect=…` y `/login?redirect=…`. Bloquea scroll del body y pone `inert` en `#root`. GA4: `signup_modal_view {page}`, `signup_modal_cta {action}`, `signup_modal_dismiss {method}`. `sign_up` lleva `method: 'email'`; marcarlo como evento clave se hace en GA4 Admin.
 
@@ -277,6 +277,5 @@ Pendiente / deuda:
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
 - Búsqueda por texto / orden en catálogo; paginación.
 - Ruta 404; `index.html` con `lang="en"` y `<title>dev4gaming</title>` genéricos; sin meta SEO/OG.
-- Hero: `influencerHandle`/`influencerName` de `HERO_CAMPAIGN` siguen como placeholder (figcaption y parámetros GA4).
 - `supabase_setup.sql` y README (plantilla Vite) desactualizados.
 - RLS de reviews permite `user_id NULL` con cualquier `user_name` (suplantación de nombres); sin rate limit.
