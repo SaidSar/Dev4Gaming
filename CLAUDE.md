@@ -84,7 +84,7 @@ supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplic
 supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
 supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
 supabase_dev_metrics.sql     # RPC get_build_metrics (aplicada 2026-10-18)
-supabase/migrations/20261021000000_conversion_events_hero.sql  # ⚠ PENDIENTE de aplicar: CHECK de conversion_events + hero_video_play|hero_cta_click
+supabase/migrations/20261021000000_conversion_events_hero.sql  # CHECK de conversion_events + hero_video_play|hero_cta_click (aplicada 2026-10-21)
 supabase_dev_games.sql       # games.is_listed + triggers, INSERT de juegos por devs, bucket público game-covers (aplicada 2026-10-18)
 seed_academic_games.sql      # PLANTILLA con TODO (no aplicada): 1–3 juegos académicos
 ```
@@ -126,7 +126,7 @@ Esquema real en la BD (public):
 - `private.app_secrets` (esquema no expuesto por la API): `review_ip_salt`, generado aleatorio al migrar
 - `reviews`: id, game_id → games (cascade), user_name, rating 1–5, comment, created_at, **user_id uuid nullable → auth.users**, utm_source, build_id → builds (null = "Versión no especificada"), client_ip_hash (HMAC-SHA256 con salt secreto). Trigger `reviews_before_insert`: valida que el build sea del juego y esté publicado; máx. 5 reseñas anónimas por juego, IP y 24 h
 - `profiles`: id → auth.users PK, display_name, created_at, utm_source, **role** ('player'|'dev_pending'|'dev_verified'|'admin', default player), **signup_intent** ('player'|'developer'|null). Se crea por trigger `on_auth_user_created` → `handle_new_user()` (copia `display_name`, `utm_source` y `signup_intent` de raw_user_meta_data; nunca asigna role). `role` lo mantiene el trigger `on_dev_verification_change` (pending→dev_pending, approved→dev_verified, rejected→player; no toca admin)
-- `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click; la migración pendiente agrega hero_video_play|hero_cta_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
+- `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click|hero_video_play|hero_cta_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
 - `developer_verifications`: user_id PK → auth.users, type ('independent'|'company'), legal_name, website, portfolio_url, tax_id, status ('pending'|'approved'|'rejected'), created_at
 
 RLS (todas habilitadas):
@@ -262,7 +262,7 @@ Breakpoints usados: 900, 768, 640, 560, 480px. Respeta `prefers-reduced-motion`.
 Completo: landing, catálogo con filtro por género, detalle, reseñas anónimas/autenticadas con estrellas, registro/login, perfil, solicitud de verificación de desarrollador.
 
 Pendiente / deuda:
-- GA4: aplicar la migración de `conversion_events` del hero; eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
+- GA4: eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
 - Editar o borrar juegos desde el panel (hoy solo crear; no hay UPDATE/DELETE para devs).
 - Panel admin para aprobar verificaciones y moderar reseñas.
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.
