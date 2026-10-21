@@ -210,9 +210,9 @@ function HeroInfluencer({
           <figcaption className="hero-inf__figcaption">
             <span>Gameplay real de {gameTitle} en beta · {duration}</span>
             {reviewHref && (isExternalReview ? (
-              <a href={reviewHref} target="_blank" rel="noopener noreferrer">Ver su reseña</a>
+              <a href={reviewHref} target="_blank" rel="noopener noreferrer">Ver reseñas del juego</a>
             ) : (
-              <Link to={reviewHref}>Ver su reseña</Link>
+              <Link to={reviewHref}>Ver reseñas del juego</Link>
             ))}
           </figcaption>
         </figure>

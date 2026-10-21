@@ -11,7 +11,7 @@ import '../styles/landing.css'
 // Versiones web en public/media/ generadas con ffmpeg desde el original de
 // 1080x1920 (que se queda fuera del repo, para redes): WebM VP9 + MP4 H.264
 // 720x1280 con faststart y poster JPG del segundo 1. Ajusta handle (va en los
-// eventos GA4 del video), juego y reviewHref (p. ej. la URL de su reseña en TikTok).
+// eventos GA4 del video), juego y reviewHref (ficha del juego con sus reseñas).
 const HERO_CAMPAIGN = {
   sources: [
     { src: '/media/dev4gaming-promo.webm', type: 'video/webm' },
