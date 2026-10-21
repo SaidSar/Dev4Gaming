@@ -26,3 +26,8 @@ dist-ssr
 
 .vercel
 .env*
+!.env.example
+
+# Archivos locales que no van al repo
+CLAUDE.md.bak-2026-10-03
+supabase/.temp/
