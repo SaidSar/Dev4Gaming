@@ -20,10 +20,11 @@ npm run lint     # Oxlint (.oxlintrc.json: react + oxc)
 ```
 No hay tests. Tras cambios de código: `npm run lint` y `npm run build`.
 
-`.env` (ignorado por Git; nunca mostrar valores):
+`.env` / `.env.local` (ignorados por Git; nunca mostrar valores; plantilla en `.env.example`, sí versionado):
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
+VITE_GA_ID=            # opcional; sin ella no se carga gtag
 ```
 La anon key es pública por diseño; la seguridad depende de RLS. Nunca usar `service_role` en el frontend.
 Proyecto Supabase ref: `kbygvkpvushuldyygcba`.
@@ -34,7 +35,7 @@ Proyecto Supabase ref: `kbygvkpvushuldyygcba`.
 
 ```text
 src/
-├── main.jsx                 # createRoot + StrictMode
+├── main.jsx                 # initAnalytics() + createRoot + StrictMode
 ├── App.jsx                  # BrowserRouter > AuthProvider > Navbar + Suspense > Routes. Landing eager; el resto de páginas con React.lazy
 ├── services/supabase.js     # punto de acceso a Supabase (cliente + queries/mutaciones)
 ├── services/buildUpload.js  # uploadBuildFile(): subida TUS al bucket builds (aparte para no cargar tus-js-client fuera del panel)
@@ -43,7 +44,7 @@ src/
 │   ├── roles.js             # isVerifiedDev, devEntryPath, safeRedirect, postLoginPath (destino tras login según rol)
 │   ├── feedback.js          # getDeviceInfo/describeDevice, rememberDownload/getPendingRating/markRated (localStorage), candado anónimo (sessionStorage)
 │   ├── builds.js            # PLATFORM_LABEL/ORDER, DEVICE_LABEL, formatBytes, detectPlatform (android|ios|windows|macos|linux), recommendPlatform, isAllowedWebUrl, sha256Hex, safeFileName
-│   └── track.js             # trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) y setUserRole(role) solo GA4 (no-op sin gtag)
+│   └── track.js             # initAnalytics() (carga gtag si hay VITE_GA_ID), trackPageView() por ruta, trackConversion(event, extra) → conversion_events (+ gtag si existe); trackEvent(event, params) y setUserRole(role) solo GA4 (no-op sin gtag)
 ├── context/
 │   ├── auth-context.js      # createContext(null)
 │   ├── AuthContext.jsx      # <AuthProvider>: sesión, profile, verification, displayName, loading, refresh
@@ -83,6 +84,7 @@ supabase_builds.sql          # builds, downloads, bug_reports, roles, RLS (aplic
 supabase_storage.sql         # buckets privados builds / bug-screenshots + políticas (aplicada 2026-10-18)
 supabase/functions/get-download-url/index.ts  # Edge Function (Deno) desplegada, verify_jwt on
 supabase_dev_metrics.sql     # RPC get_build_metrics (aplicada 2026-10-18)
+supabase/migrations/20261021000000_conversion_events_hero.sql  # ⚠ PENDIENTE de aplicar: CHECK de conversion_events + hero_video_play|hero_cta_click
 supabase_dev_games.sql       # games.is_listed + triggers, INSERT de juegos por devs, bucket público game-covers (aplicada 2026-10-18)
 seed_academic_games.sql      # PLANTILLA con TODO (no aplicada): 1–3 juegos académicos
 ```
@@ -124,7 +126,7 @@ Esquema real en la BD (public):
 - `private.app_secrets` (esquema no expuesto por la API): `review_ip_salt`, generado aleatorio al migrar
 - `reviews`: id, game_id → games (cascade), user_name, rating 1–5, comment, created_at, **user_id uuid nullable → auth.users**, utm_source, build_id → builds (null = "Versión no especificada"), client_ip_hash (HMAC-SHA256 con salt secreto). Trigger `reviews_before_insert`: valida que el build sea del juego y esté publicado; máx. 5 reseñas anónimas por juego, IP y 24 h
 - `profiles`: id → auth.users PK, display_name, created_at, utm_source, **role** ('player'|'dev_pending'|'dev_verified'|'admin', default player), **signup_intent** ('player'|'developer'|null). Se crea por trigger `on_auth_user_created` → `handle_new_user()` (copia `display_name`, `utm_source` y `signup_intent` de raw_user_meta_data; nunca asigna role). `role` lo mantiene el trigger `on_dev_verification_change` (pending→dev_pending, approved→dev_verified, rejected→player; no toca admin)
-- `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
+- `conversion_events`: id uuid PK, event (CHECK: sign_up|submit_review|download_click|play_click; la migración pendiente agrega hero_video_play|hero_cta_click), game_id → games (set null), user_id → auth.users (set null), utm_source/medium/campaign (≤100), created_at (indexado)
 - `developer_verifications`: user_id PK → auth.users, type ('independent'|'company'), legal_name, website, portfolio_url, tax_id, status ('pending'|'approved'|'rejected'), created_at
 
 RLS (todas habilitadas):
@@ -187,11 +189,13 @@ update public.profiles set role = 'admin' where id = '<uuid del usuario>';
 
 **Aviso para calificar**: tras una descarga exitosa se guarda en localStorage `d4g_downloads` y se muestra "¿Ya probaste la vX?" (también al volver otro día). "Calificar ahora" → `?build=<id>`, baja a `#resena` y enfoca la 1.ª estrella; "Ahora no" o reseñar ese build lo marca en `d4g_rated_builds`.
 
-**Hero** (`HeroInfluencer`): `sources` [{src, type}] (WebM antes que MP4), autoplay muted salvo `prefers-reduced-motion` (entonces poster + botón de play central); subtítulos incrustados en el video (sin `<track>`); botón de sonido con `aria-pressed`; si falla el último `<source>` muestra el poster. En ≤480px el video se limita a 62svh y los CTAs van antes del video (above the fold en 360×780 y 390×844). Eventos GA4 vía `trackEvent`: `hero_video_play` (clic), `hero_video_unmute`, `hero_video_complete` (90%, 1 vez por montaje), `hero_cta_click {cta, placement: 'hero_reel'}`. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
+**Hero** (`HeroInfluencer`): `sources` [{src, type}] (WebM antes que MP4), autoplay muted salvo `prefers-reduced-motion` (entonces poster + botón de play central); subtítulos incrustados en el video (sin `<track>`); botón de sonido con `aria-pressed`; si falla el último `<source>` muestra el poster. En ≤480px el video se limita a 62svh y los CTAs van antes del video (above the fold en 360×780 y 390×844). Eventos: `hero_video_play` (clic) y `hero_cta_click {cta, placement: 'hero_reel'}` vía `trackConversion` (GA4 + `conversion_events`); `hero_video_unmute` y `hero_video_complete` (90%, 1 vez por montaje) solo GA4 vía `trackEvent`. Todos llevan `influencer`/`game_id` según aplique. Tokens `--hero-*` y fuentes Chakra Petch / IBM Plex Sans en global.css.
 
 **Invitación a registrarse** (`useSignupInvite` + `SignupInviteModal`): sin sesión (espera `loading`), solo en `/games` y `/juego/:id`, 3 s tras entrar; no abre si el foco está dentro de `[data-no-signup-invite]` (ReviewForm) y reintenta cada 3 s. Una vez por sesión: sessionStorage `d4g_signup_invite`. CTAs → `/login?mode=register&redirect=…` y `/login?redirect=…`. Bloquea scroll del body y pone `inert` en `#root`. GA4: `signup_modal_view {page}`, `signup_modal_cta {action}`, `signup_modal_dismiss {method}`. `sign_up` lleva `method: 'email'`; marcarlo como evento clave se hace en GA4 Admin.
 
-**Analítica (GA4)**: hoy **no hay GA4 cargado**. `trackEvent(event, params)` y `setUserRole(role)` (utils/track.js) no hacen nada si `window.gtag` no existe; `trackConversion` además escribe siempre en `conversion_events` (embudo propio). Todos los eventos llevan los UTM de la sesión.
+**Analítica (GA4)**: propiedad `G-1Y5GJMCWD4`, ID en `VITE_GA_ID` (`.env.local` y Vercel production/preview; Vite lo incrusta en el build, cambiarlo exige redeploy). `initAnalytics()` (main.jsx) inserta gtag.js una vez con `send_page_view: false` (y `debug_mode` solo en dev); sin `VITE_GA_ID` válido no se define `window.gtag` y todo queda en no-op. `PageViewTracker` (App.jsx) llama `trackPageView()` en cada cambio de pathname/search: ignora la URL repetida (StrictMode) y el primer page_view lleva `campaign_source/medium/name/content` de `captureUtm()`. `trackConversion` además escribe siempre en `conversion_events` (embudo propio). Todos los eventos llevan los UTM de la sesión como parámetros (`utm_source`…).
+
+⚠ En GA4 Admin → Flujos de datos → web → Medición mejorada → Vistas de página → Configuración avanzada, desactivar "Cambios de página basados en eventos del historial del navegador": si no, GA4 manda otro page_view (`_ee=1`) en cada cambio de ruta además del manual.
 
 User property **`user_role`** (`setUserRole`, desde `AuthContext` al terminar de cargar): `anonymous` | `player` | `dev_pending` | `dev_verified` | `admin` (= `profiles.role`).
 
@@ -208,22 +212,9 @@ User property **`user_role`** (`setUserRole`, desde `AuthContext` al terminar de
 | `build_upload` | DevDashboard (cada plataforma guardada) | `game_id, build_id, version, platform, storage_provider, size_bytes` |
 | `hero_video_play` / `hero_video_unmute` / `hero_video_complete` / `hero_cta_click` | HeroInfluencer | ver **Hero** |
 | `signup_modal_view` / `signup_modal_cta` / `signup_modal_dismiss` | useSignupInvite | ver **Invitación** |
-| `play_click`, `download_click`, `submit_review` | `trackConversion` (embudo propio; también llegan a GA4) | `game_id` (+ `rating`). En GA4 usar `review_submit`, no `submit_review`, para no contar doble |
+| `play_click`, `download_click`, `submit_review`, `hero_video_play`, `hero_cta_click` | `trackConversion` (embudo propio; también llegan a GA4) | `game_id` (+ `rating`). En GA4 usar `review_submit`, no `submit_review`, para no contar doble |
 
-**Activar GA4 (pendiente, sin tocar el código de eventos):**
-1. `.env`: `VITE_GA_ID=G-XXXXXXXXXX` (y la misma variable en el hosting).
-2. `index.html`, dentro de `<head>` (Vite reemplaza `%VITE_GA_ID%` al compilar):
-```html
-<script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_ID%"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', '%VITE_GA_ID%');
-</script>
-```
-3. GA4 Admin: marcar `sign_up`, `build_download` y `review_submit` como eventos clave; crear la dimensión personalizada de usuario `user_role` y las de evento que se quieran analizar (`platform`, `severity`, `version`…).
-4. Si se agrega aviso de cookies, inicializar con Consent Mode antes del `config`.
+**GA4 Admin (pendiente):** marcar `sign_up`, `build_download` y `review_submit` como eventos clave; crear la dimensión personalizada de usuario `user_role` y las de evento que se quieran analizar (`placement`, `influencer`, `cta`, `platform`, `severity`, `version`…). Si se agrega aviso de cookies, inicializar con Consent Mode antes del `config` en `initAnalytics()`.
 
 ## 6. Sistema de diseño
 
@@ -271,7 +262,7 @@ Breakpoints usados: 900, 768, 640, 560, 480px. Respeta `prefers-reduced-motion`.
 Completo: landing, catálogo con filtro por género, detalle, reseñas anónimas/autenticadas con estrellas, registro/login, perfil, solicitud de verificación de desarrollador.
 
 Pendiente / deuda:
-- Activar GA4 (ver **Analítica (GA4)**: script + `VITE_GA_ID`); eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
+- GA4: aplicar la migración de `conversion_events` del hero; eventos aún sin instrumentar: `view_item`, `select_content` (filtro del catálogo). Lectura de `conversion_events` solo por dashboard (no hay rol admin); inserts anónimos sin rate limit.
 - Editar o borrar juegos desde el panel (hoy solo crear; no hay UPDATE/DELETE para devs).
 - Panel admin para aprobar verificaciones y moderar reseñas.
 - `getAverageRating` quedó redundante (lo reemplaza `getReviewStats`): eliminarlo. `getReviewStats` trae todas las filas de reviews; con más volumen, pasar a vista/RPC agregada.

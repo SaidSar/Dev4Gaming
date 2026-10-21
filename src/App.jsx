@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/Navbar'
 import CampaignBanner from './components/CampaignBanner'
@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import SignupInviteModal from './components/SignupInviteModal'
 import Landing from './pages/Landing'
 import { captureUtm } from './utils/utm'
+import { trackPageView } from './utils/track'
 import { useSignupInvite } from './hooks/useSignupInvite'
 import './styles/global.css'
 
@@ -25,6 +26,13 @@ const Developers      = lazy(() => import('./pages/Developers'))
 function LegacyGameRedirect() {
   const { id } = useParams()
   return <Navigate to={`/juego/${id}`} replace />
+}
+
+// page_view de GA4 en cada cambio de ruta (gtag no lo manda solo: SPA)
+function PageViewTracker() {
+  const { pathname, search } = useLocation()
+  useEffect(() => { trackPageView() }, [pathname, search])
+  return null
 }
 
 // Invitación a registrarse; el hook decide ruta, sesión y momento
@@ -47,6 +55,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <PageViewTracker />
       <AuthProvider>
         <Navbar />
         <CampaignBanner source={utm.utm_source} />

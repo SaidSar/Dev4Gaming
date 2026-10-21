@@ -2,7 +2,7 @@
 // Presentacional: la página le pasa el juego, los medios y los conteos.
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { trackEvent } from '../utils/track'
+import { trackConversion, trackEvent } from '../utils/track'
 import '../styles/heroInfluencer.css'
 
 const COMPLETE_AT = 0.9 // hero_video_complete se dispara al 90%
@@ -56,7 +56,7 @@ function HeroInfluencer({
     if (!video) return
     if (video.paused) {
       video.play().catch(() => setFailed(true))
-      trackEvent('hero_video_play', { game_id: gameId, influencer: handle })
+      trackConversion('hero_video_play', { game_id: gameId, influencer: handle })
     } else {
       video.pause()
     }
@@ -222,7 +222,7 @@ function HeroInfluencer({
           <Link
             to={`/juego/${gameId}`}
             className="hero-inf__cta hero-inf__cta--primary"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'jugar', game_id: gameId, placement: CTA_PLACEMENT })}
+            onClick={() => trackConversion('hero_cta_click', { cta: 'jugar', game_id: gameId, placement: CTA_PLACEMENT })}
           >
             Probar el juego del video
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -232,7 +232,7 @@ function HeroInfluencer({
           <Link
             to={developerHref}
             className="hero-inf__cta hero-inf__cta--ghost"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'desarrollador', placement: CTA_PLACEMENT })}
+            onClick={() => trackConversion('hero_cta_click', { cta: 'desarrollador', placement: CTA_PLACEMENT })}
           >
             {/* Un solo hijo de texto: el gap del flex separaría el span */}
             <span>Soy desarrollador<span className="hero-inf__desktop-only">: subir mi juego</span></span>
